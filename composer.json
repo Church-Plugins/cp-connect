@@ -1,0 +1,27 @@
+{
+  "name": "churchplugins/cp-connect",
+  "type": "wordpress-plugin",
+  "description": "Church staff plugin.",
+  "keywords": [],
+  "homepage": "https://churchplugins.com",
+  "authors": [
+    {
+      "name": "Tanner Moushey",
+      "email": "tanner@churchplugins.com",
+      "homepage": "https://churchplugins.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.0.0",
+    "composer/installers": "*",
+    "wpackio/enqueue": "^3.4",
+    "smadeira/ministry-platform-api": "^2.0.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "CP_Connect\\": "includes/",
+      "MinistryPlatform\\": "includes/Integrations/MinistryPlatform/",
+      "ChurchPlugins\\": "includes/ChurchPlugins/"
+    }
+  }
+}

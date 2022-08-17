@@ -1,0 +1,10 @@
+.DS_STORE
+composer.lock
+package-lock.json
+/dist/
+/build/
+/node_modules/
+/docs/
+.phpdoc
+.vscode
+app/templates/*.rt.js
