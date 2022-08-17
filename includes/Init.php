@@ -92,6 +92,7 @@ class Init {
 	protected function includes() {
 		require_once( 'Templates.php' );
 		Admin\Init::get_instance();
+		Integrations\Init::get_instance();
 		$this->setup = Setup\Init::get_instance();
 	}
 	

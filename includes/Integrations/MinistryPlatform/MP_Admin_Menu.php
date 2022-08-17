@@ -9,9 +9,10 @@ add_action('admin_menu', 'MinistryPlatform\ministry_platform_plugin_menu');
 function ministry_platform_plugin_menu()
 {
 
-    add_plugins_page(
-        'Ministry Platform Plugin',         // The title to be displayed in the browser window for this page.
-        'MP Plugin',                        // The text to be displayed for this menu item
+	
+    add_submenu_page( 'options-general.php',
+        'Ministry Platform Integration',         // The title to be displayed in the browser window for this page.
+        'Ministry Platform',                        // The text to be displayed for this menu item
         'administrator',                    // Which type of users can see this menu item
         'ministry_platform_plugin_options', // The unique ID - that is, the slug - for this menu item
         'MinistryPlatform\ministry_platform_plugin_display'  // The name of the function to call when rendering the page for this menu

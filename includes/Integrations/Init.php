@@ -39,7 +39,9 @@ class Init {
 	 *
 	 * @return void
 	 */
-	protected function includes() {}
+	protected function includes() {
+		require_once('MinistryPlatform/MinistryPlatform.php');
+	}
 
 	protected function actions() {}
 

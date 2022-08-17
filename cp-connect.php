@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Church Plugins - Staff
+ * Plugin Name: Church Plugins - Connect
  * Plugin URL: https://churchplugins.com
- * Description: Church Staff plugin for managing staff
+ * Description: ChurchPlugins integration plugin for ChMS
  * Version: 1.0.0
  * Author: Church Plugins
  * Author URI: https://churchplugins.com

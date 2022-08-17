@@ -1,10 +1,4 @@
 <?php namespace MinistryPlatform;
-/**
- * Plugin Name: Ministry Platform Data Access
- * Description: A wordpress plugin wrapper for accessing Ministry Platform
- * utilizing the the ministry platform API
- * Version: 2.1.0
- */
 
 use MinistryPlatform\Templates\featuredEvents;
 use MinistryPlatform\Templates\featuredEventsWithDate;
