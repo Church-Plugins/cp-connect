@@ -8,7 +8,7 @@ use CP_Connect\Admin\Settings;
  *
  * @author costmo
  */
-class Init {
+class _Init {
 
 	/**
 	 * @var
@@ -16,19 +16,19 @@ class Init {
 	protected static $_instance;
 
 	/**
-	 * @var Setup\Init
+	 * @var Setup\_Init
 	 */
 	public $setup;
 
 	public $enqueue;
 
 	/**
-	 * Only make one instance of Init
+	 * Only make one instance of _Init
 	 *
-	 * @return Init
+	 * @return _Init
 	 */
 	public static function get_instance() {
-		if ( ! self::$_instance instanceof Init ) {
+		if ( ! self::$_instance instanceof _Init ) {
 			self::$_instance = new self();
 		}
 
@@ -91,9 +91,10 @@ class Init {
 	 */
 	protected function includes() {
 		require_once( 'Templates.php' );
-		Admin\Init::get_instance();
-		Integrations\Init::get_instance();
-		$this->setup = Setup\Init::get_instance();
+		Admin\_Init::get_instance();
+		ChMS\_Init::get_instance();
+		Integrations\_Init::get_instance();
+		$this->setup = Setup\_Init::get_instance();
 	}
 	
 	protected function actions() {}

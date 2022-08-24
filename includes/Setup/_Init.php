@@ -1,24 +1,24 @@
 <?php
 
-namespace CP_Connect\Integrations;
+namespace CP_Connect\Setup;
 
 /**
- * Setup integration initialization
+ * Setup plugin initialization
  */
-class Init {
+class _Init {
 
 	/**
-	 * @var Init
+	 * @var _Init
 	 */
 	protected static $_instance;
 
 	/**
-	 * Only make one instance of Init
+	 * Only make one instance of _Init
 	 *
-	 * @return Init
+	 * @return _Init
 	 */
 	public static function get_instance() {
-		if ( ! self::$_instance instanceof Init ) {
+		if ( ! self::$_instance instanceof _Init ) {
 			self::$_instance = new self();
 		}
 
@@ -39,9 +39,7 @@ class Init {
 	 *
 	 * @return void
 	 */
-	protected function includes() {
-		require_once('MinistryPlatform/MinistryPlatform.php');
-	}
+	protected function includes() {}
 
 	protected function actions() {}
 

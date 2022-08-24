@@ -16,16 +16,16 @@ require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChurchPlugins/init.php" );
 require_once( CP_CONNECT_PLUGIN_DIR . 'vendor/autoload.php' );
 
 
-use CP_Connect\Init as Init;
+use CP_Connect\_Init as Init;
 
 /**
- * @var CP_Connect\Init
+ * @var CP_Connect\_Init
  */
 global $cp_connect;
 $cp_connect = cp_connect();
 
 /**
- * @return CP_Connect\Init
+ * @return CP_Connect\_Init
  */
 function cp_connect() {
 	return Init::get_instance();
