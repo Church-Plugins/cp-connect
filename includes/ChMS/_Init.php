@@ -14,8 +14,8 @@ class _Init {
 
 	/**
 	 * The string to use for the cron pull
-	 * 
-	 * @var string 
+	 *
+	 * @var string
 	 */
 	public static $_cron_hook = 'cp_connect_chms_pull';
 
@@ -48,6 +48,7 @@ class _Init {
 	 */
 	protected function includes() {
 		MinistryPlatform::get_instance();
+		PCO::get_instance();
 	}
 
 	protected function actions() {
@@ -58,7 +59,7 @@ class _Init {
 
 	/**
 	 * Schedule the cron to pull data from the ChMS
-	 * 
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -72,7 +73,7 @@ class _Init {
 			'timestamp' => time(),
 			'recurrence' => 'hourly',
 		] );
-		
+
 		wp_schedule_event( $args[ 'timestamp' ], $args['recurrence'], self::$_cron_hook );
 	}
 
