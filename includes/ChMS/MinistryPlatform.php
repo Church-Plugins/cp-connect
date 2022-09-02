@@ -10,7 +10,7 @@ class MinistryPlatform extends ChMS {
 		$this->mpLoadConnectionParameters();
 		
 		add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-//		add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+		add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
@@ -125,14 +125,82 @@ class MinistryPlatform extends ChMS {
 		}
 
 		$groups = $mp->table( 'Groups' )
-		             ->select( "Group_ID, Group_Name, Group_Type_ID_Table.[Group_Type], Groups.Congregation_ID, Congregation_ID_Table.[Congregation_Name], 
-	             Primary_Contact_Table.[First_Name] AS Contact_First_Name, Primary_Contact_Table.[Last_Name] AS Contact_Last_Name, Groups.Description, 
-	             Groups.Start_Date, Groups.End_Date, Life_Stage_ID_Table.[Life_Stage], Group_Focus_ID_Table.[Group_Focus], Meeting_Time, Meeting_Day_ID_Table.[Meeting_Day], 
-	             Meeting_Frequency_ID_Table.[Meeting_Frequency], dp_fileUniqueId as Image_ID" )
-		             ->filter( "Groups.End_Date >= getdate()" )
+		             ->select( "Group_ID, Group_Name, Group_Type_ID_Table.[Group_Type], Groups.Congregation_ID,
+		             Primary_Contact_Table.[First_Name], Primary_Contact_Table.[Last_Name], Groups.Description,
+		             Groups.Start_Date, Groups.End_Date, Life_Stage_ID_Table.[Life_Stage], Group_Focus_ID_Table.[Group_Focus], 
+		             Offsite_Meeting_Address_Table.[Postal_Code],Offsite_Meeting_Address_Table.[Address_Line_1],Offsite_Meeting_Address_Table.[City],
+		             Offsite_Meeting_Address_Table.[State/Region],
+		             Meeting_Time, Meeting_Day_ID_Table.[Meeting_Day], Meeting_Frequency_ID_Table.[Meeting_Frequency], dp_fileUniqueId as Image_ID" )
+		             ->filter( "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" )
 		             ->get();
+		
+		$formatted = [];
 
-		return $groups;
+		foreach ( $groups as $group ) {
+			$start_date = strtotime( $group['Start_Date'] );
+			$end_date   = strtotime( $group['End_Date'] );
+
+			$args = [
+				'chms_id'          => $group['Group_ID'],
+				'post_status'      => 'publish',
+				'post_title'       => $group['Group_Name'],
+				'post_content'     => $group['Description'] . '&nbsp;',
+				'tax_input'        => [],
+				'group_category'   => [],
+				'group_type'       => [],
+				'group_life_stage' => [],
+				'meta_input'       => [
+					'leader'     => $group['First_Name'] . ' ' . $group['Last_Name'],
+					'start_date' => date( 'Y-m-d', $start_date ),
+					'end_date'   => date( 'Y-m-d', $end_date ),
+				],
+				'thumbnail_url'    => '',
+				'break' => 11,
+			];
+			
+			if ( ! empty( $group['Image_ID'] ) ) {
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $group['Image_ID'] . '?ext=.jpeg';
+			}
+			
+			if ( !empty( $group['Meeting_Frequency'] ) ) {
+				$args['meta_input']['frequency'] = $group['Meeting_Frequency'];
+			}
+			
+			if ( !empty( $group['City'] ) ) {
+				$args['meta_input']['location'] = sprintf( "%s, %s %s", $group['City'], $group['State/Region'], $group['Postal_Code'] );
+			}
+			
+			if ( !empty( $group['Meeting_Time'] ) ) {
+				$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $group['Meeting_Time'] ) );
+				
+				if ( ! empty( $group['Meeting_Day'] ) ) {
+					$args['meta_input']['time_desc'] = $group['Meeting_Day'] . 's at ' . $args['meta_input']['time_desc'];
+					$args['meta_input']['meeting_day'] = $group['Meeting_Day'];
+				}
+			}
+			
+			if ( ! empty( $group['Congregation_ID'] ) ) {
+				if ( $location = $this->get_location_term( $group['Congregation_ID'] ) ) {
+					$args['tax_input']['cp_location'] = $location;
+				}
+			}
+			
+			if ( ! empty( $group['Group_Focus'] ) ) {
+				$args['group_category'][] = $group['Group_Focus'];
+			}
+
+			if ( ! empty( $group['Group_Type'] ) ) {
+				$args['group_type'][] = $group['Group_Type'];
+			}
+
+			if ( ! empty( $group['Life_Stage'] ) ) {
+				$args['group_life_stage'][] = $group['Life_Stage'];
+			}
+
+			$formatted[] = $args;
+		}
+
+		return $formatted;
 	}
 
 
