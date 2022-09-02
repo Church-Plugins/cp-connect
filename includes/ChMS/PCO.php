@@ -7,10 +7,11 @@ use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
 class PCO extends ChMS {
 
 	public function integrations() {
-		$this->loadConnectionParameters();
 
-		add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-		add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+		if( true === $this->loadConnectionParameters() ) {
+			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
+			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+		}
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
@@ -176,7 +177,20 @@ class PCO extends ChMS {
 	 */
 	function loadConnectionParameters() {
 
+		// If no options available then just return - it hasn't been setup yet
+		if ( ! $options = get_option( 'pco_plugin_options', '' ) ) {
+			return false;
+		}
 
+		$value_length = 0;
+
+		foreach ( $options as $option => $value ) {
+			$envString = $option . '=' . $value;
+			$value_length += strlen( trim( $value ) );
+			putenv( $envString );
+		}
+
+		return ($value_length > 0) ? true : false;
 	}
 
 }
