@@ -27,7 +27,6 @@ class PCO extends ChMS {
 		return $formatted;
 	}
 
-
 	/**
 	 * This function introduces a single plugin menu option into the WordPress 'Plugins'
 	 * menu.
@@ -97,7 +96,7 @@ class PCO extends ChMS {
 			'pco_plugin_options',                 // The page on which this option will be displayed
 			'pco_settings_section',               // The name of the section to which this field belongs
 			[                                                   // The array of arguments to pass to the callback. In this case, just a description.
-			    'The API Application ID for a Personal Access Token from https://api.planningcenteronline.com/oauth/applications'
+			    'The <strong>Application ID</strong> for a Personal Access Token'
 			]
 		);
 
@@ -108,7 +107,7 @@ class PCO extends ChMS {
 			'pco_plugin_options',                 // The page on which this option will be displayed
 			'pco_settings_section',               // The name of the section to which this field belongs
 			[                                                   // The array of arguments to pass to the callback. In this case, just a description.
-			    'The Secret for your Personal Access Token'
+			    'The <strong>Secret</strong> for your Personal Access Token'
 			]
 		);
 
@@ -122,7 +121,7 @@ class PCO extends ChMS {
 	} // end ministry_platform_initialize_plugin_options
 
 	function general_options_callback() {
-		echo '<p>The following parameters are required to authenticate to the API and then execute API calls to Planning Center Online.</p>';
+		echo '<p>The following parameters are required to authenticate to the API and then execute API calls to Planning Center Online.</p><p>You can get your authentication credentials by <a target="_blank" href="https://api.planningcenteronline.com/oauth/applications">clicking here</a> and scrolling down to "Personal Access Tokens"</p>';
 	}
 
 
