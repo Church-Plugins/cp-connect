@@ -8,7 +8,7 @@ class PCO extends ChMS {
 
 	public function integrations() {
 
-		if( true === $this->loadConnectionParameters() ) {
+		if( true === $this->load_connection_parameters() ) {
 			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		}
@@ -174,23 +174,11 @@ class PCO extends ChMS {
 	/**
 	 * Get oAuth and API connection parameters from the database
 	 *
+	 * @param string $option_slug			Ignored
+	 * @return bool
 	 */
-	function loadConnectionParameters() {
-
-		// If no options available then just return - it hasn't been setup yet
-		if ( ! $options = get_option( 'pco_plugin_options', '' ) ) {
-			return false;
-		}
-
-		$value_length = 0;
-
-		foreach ( $options as $option => $value ) {
-			$envString = $option . '=' . $value;
-			$value_length += strlen( trim( $value ) );
-			putenv( $envString );
-		}
-
-		return ($value_length > 0) ? true : false;
+	function load_connection_parameters( $option_slug = 'pco_plugin_options' ) {
+		return parent::load_connection_parameters( 'pco_plugin_options' );
 	}
 
 }
