@@ -48,7 +48,7 @@ class _Init {
 	 */
 	protected function includes() {
 		MinistryPlatform::get_instance();
-		PCO::get_instance();
+		$pco = PCO::get_instance();
 	}
 
 	protected function actions() {

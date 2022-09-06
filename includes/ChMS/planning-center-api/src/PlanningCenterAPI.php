@@ -320,6 +320,19 @@ class PlanningCenterAPI
         return $this;
     }
 
+	/**
+     * Specify search filter
+     *
+     * @param $filter
+     * @return $this
+     */
+    public function filter($filter)
+    {
+        $this->parameters['filter'] = $filter;
+
+        return $this;
+    }
+
     /**
      * Specify the data to be used in the POST or PUT operations
      *
