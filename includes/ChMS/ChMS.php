@@ -109,4 +109,26 @@ abstract class ChMS {
 
 		return ($value_length > 0) ? true : false;
 	}
+
+	/**
+	 * Get parameters for this connection
+	 *
+	 * @param string $option_slug
+	 * @return array
+	 * @author costmo
+	 */
+	function get_connection_parameters( $option_slug = '' ) {
+
+		// If no options available then just return - it hasn't been setup yet
+		$options = get_option( $option_slug ?? md5( time() ), false );
+		if( empty( $option_slug ) || !is_string( $option_slug ) || false === $options ) {
+			return [];
+		}
+		// Sanity check the response and normalize a potentially invalid return
+		if( empty( $options ) || !is_array( $options ) ) {
+			return [];
+		}
+
+		return $options;
+	}
 }

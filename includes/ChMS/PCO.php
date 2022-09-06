@@ -2,7 +2,7 @@
 
 namespace CP_Connect\ChMS;
 
-use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
+use PlanningCenterAPI\PlanningCenterAPI as PlanningCenterAPI;
 
 class PCO extends ChMS {
 
@@ -15,15 +15,49 @@ class PCO extends ChMS {
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
+
+		// $this->pull_events();
+		$this->pull_groups();
 	}
 
 	public function pull_events( $events = [] ) {
+
+		// Pull events here
+		$pco = new PlanningCenterAPI();
+
+		$items =
+			$pco->module('calendar')
+				->table('events')
+				->get();
+
+		error_log( var_export( $items, true ) );
+
+		if( !empty( $pco->errorMessage() ) ) {
+			error_log( var_export( $pco->errorMessage(), true ) );
+		}
+
 
 		$formatted = [];
 		return $formatted;
 	}
 
 	public function pull_groups( $groups = [] ) {
+
+		// Pull groups here
+		$pco = new PlanningCenterAPI();
+
+		$items =
+			$pco->module('groups')
+				->table('groups')
+				->get();
+
+		error_log( var_export( $items, true ) );
+
+		if( !empty( $pco->errorMessage() ) ) {
+			error_log( var_export( $pco->errorMessage(), true ) );
+		}
+
+
 		$formatted = [];
 		return $formatted;
 	}
@@ -91,7 +125,7 @@ class PCO extends ChMS {
 
 		// Next, we will introduce the fields for the configuration information.
 		add_settings_field(
-			'PCO_APP_ID',                                  // ID used to identify the field throughout the theme
+			'PCO_APPLICATION_ID',                                  // ID used to identify the field throughout the theme
 			'Application ID',                                     // The label to the left of the option interface element
 			[ $this, 'pco_app_id_callback' ],        // The name of the function responsible for rendering the option interface
 			'pco_plugin_options',                 // The page on which this option will be displayed
@@ -102,7 +136,7 @@ class PCO extends ChMS {
 		);
 
 		add_settings_field(
-			'PCO_APP_SECRET',                                  // ID used to identify the field throughout the theme
+			'PCO_SECRET',                                  // ID used to identify the field throughout the theme
 			'Application Secret',                                     // The label to the left of the option interface element
 			[ $this, 'pco_app_secret_callback' ],        // The name of the function responsible for rendering the option interface
 			'pco_plugin_options',                 // The page on which this option will be displayed
@@ -146,12 +180,12 @@ class PCO extends ChMS {
 	function pco_app_id_callback( $args ) {
 
 		$options = get_option( 'pco_plugin_options' );
-		$opt = $this->get_option_value( 'PCO_APP_ID', $options );
+		$opt = $this->get_option_value( 'PCO_APPLICATION_ID', $options );
 
 		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="PCO_APP_ID" name="pco_plugin_options[PCO_APP_ID]" value="' . $opt . '" size="60"/>';
+		$html = '<input type="text" id="PCO_APPLICATION_ID" name="pco_plugin_options[PCO_APPLICATION_ID]" value="' . $opt . '" size="60"/>';
 		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="PCO_APP_ID"> ' . $args[0] . '</label>';
+		$html .= '<label for="PCO_APPLICATION_ID"> ' . $args[0] . '</label>';
 
 		echo $html;
 
@@ -160,12 +194,12 @@ class PCO extends ChMS {
 	function pco_app_secret_callback( $args ) {
 
 		$options = get_option( 'pco_plugin_options' );
-		$opt = $this->get_option_value( 'PCO_APP_SECRET', $options );
+		$opt = $this->get_option_value( 'PCO_SECRET', $options );
 
 		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="password" id="PCO_APP_SECRET" name="pco_plugin_options[PCO_APP_SECRET]" value="' . $opt . '" size="60"/>';
+		$html = '<input type="password" id="PCO_SECRET" name="pco_plugin_options[PCO_SECRET]" value="' . $opt . '" size="60"/>';
 		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="PCO_APP_SECRET"> ' . $args[0] . '</label>';
+		$html .= '<label for="PCO_SECRET"> ' . $args[0] . '</label>';
 
 		echo $html;
 
@@ -179,6 +213,17 @@ class PCO extends ChMS {
 	 */
 	function load_connection_parameters( $option_slug = 'pco_plugin_options' ) {
 		return parent::load_connection_parameters( 'pco_plugin_options' );
+	}
+
+	/**
+	 * Get parameters for this connection
+	 *
+	 * @param string $option_slug
+	 * @return array
+	 * @author costmo
+	 */
+	function get_connection_parameters( $option_slug = 'pco_plugin_options' ) {
+		return parent::get_connection_parameters( $option_slug );
 	}
 
 }

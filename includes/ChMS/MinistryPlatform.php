@@ -437,4 +437,15 @@ class MinistryPlatform extends ChMS {
 		return parent::load_connection_parameters( 'ministry_platform_plugin_options' );
 	}
 
+	/**
+	 * Get parameters for this connection
+	 *
+	 * @param string $option_slug
+	 * @return array
+	 * @author costmo
+	 */
+	function get_connection_parameters( $option_slug = 'ministry_platform_plugin_options' ) {
+		return parent::get_connection_parameters( $option_slug );
+	}
+
 }
