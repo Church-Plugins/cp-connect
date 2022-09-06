@@ -36,19 +36,21 @@ class PlanningCenterAPI
      */
     private $authorization = null;
 
-    /**
-     * Base URL for people module
-     * @var string
-     */
-    private $peopleEndpoint = 'https://api.planningcenteronline.com/people/v2/';
+	/**
+	 * API endpoint parameters: URL Prefix
+	 *
+	 * @var string
+	 * @author costmo
+	 */
+	private $apiPrefix = 'https://api.planningcenteronline.com/';
 
-	private $calendarEndpoint = 'https://api.planningcenteronline.com/calendar/v2/';
-
-    /**
-     * Base URL for the services module
-     * @var string
-     */
-    private $servicesEndpoint = 'https://api.planningcenteronline.com/services/v2/';
+	/**
+	 * API endpoint parameters: URL Suffix
+	 *
+	 * @var string
+	 * @author costmo
+	 */
+	private $apiSuffix = '/v2/';
 
     /**
      * Full URL for the request
@@ -148,17 +150,13 @@ class PlanningCenterAPI
 
     /**
      * Set the enpoint to look at the requested module
-     * Supported modules include people and services
      *
      * @param $module
      * @return $this
      */
     public function module($module)
     {
-		$prefix = 'https://api.planningcenteronline.com/';
-		$suffix = '/v2/';
-		$this->endpoint = $prefix . $module . $suffix;
-
+		$this->endpoint = $this->apiPrefix . $module . $this->apiSuffix;
         return $this;
     }
 

@@ -17,7 +17,7 @@ class PCO extends ChMS {
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
 
 		// $this->pull_events();
-		$this->pull_groups();
+		// $this->pull_groups();
 	}
 
 	public function pull_events( $events = [] ) {
