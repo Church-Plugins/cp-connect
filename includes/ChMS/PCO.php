@@ -5,35 +5,29 @@ namespace CP_Connect\ChMS;
 use PlanningCenterAPI\PlanningCenterAPI as PlanningCenterAPI;
 
 /**
- * TEMPORARY - DO NOT KEEP THE PCO_CLI CLASS BEYOND TESTING
+ * Planning Center Online implementation
+ *
+ * @author costmo
  */
-// Make the `cp` command available to WP-CLI
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	\WP_CLI::add_command( 'pco', '\CP_Connect\ChMS\PCO_CLI' );
-}
-
-class PCO_CLI {
-
-
-	public $api = null;
-
-	public function __construct() {
-	}
-
-	public function test_it( $args, $assoc_args ) {
-
-		$pco = PCO::get_instance();
-		$pco->pull_events();
-		// $pco->setup_taxonomies( true );
-
-	}
-}
-
-
 class PCO extends ChMS {
 
+	/**
+	 * Convenience reference to an external API connection
+	 *
+	 * @var PlanningCenterAPI
+	 * @author costmo
+	 */
+	public $api = null;
+
+	/**
+	 * Load up, if possible
+	 *
+	 * @return void
+	 * @author costmo
+	 */
 	public function integrations() {
 
+		// If this integration is not configured, do not add our pull filters
 		if( true === $this->load_connection_parameters() ) {
 			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
@@ -42,9 +36,6 @@ class PCO extends ChMS {
 		$this->setup_taxonomies( false );
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
-
-		// $this->pull_events();
-		// $this->pull_groups();
 	}
 
 	/**
@@ -76,9 +67,8 @@ class PCO extends ChMS {
 	/**
 	 * Setup and register taxonopmies for incoming data
 	 *
-	 * Set true to import remote data
 	 *
-	 * @param boolean $add_data
+	 * @param boolean $add_data		Set true to import remote data
 	 * @return void
 	 * @author costmo
 	 */
@@ -171,7 +161,7 @@ class PCO extends ChMS {
 				'show_admin_column' => false,
 			];
 
-			register_taxonomy( $tax_name, 'tribe_events', $args );
+			register_taxonomy( strtolower( $tax_name ), 'tribe_events', $args );
 
 			if( $add_data && !empty( $tax_data ) ) {
 				foreach( $tax_data as $term ) {

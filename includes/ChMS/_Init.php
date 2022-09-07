@@ -2,6 +2,8 @@
 
 namespace CP_Connect\ChMS;
 
+require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/cli/PCO.php" );
+
 /**
  * Setup integration initialization
  */
