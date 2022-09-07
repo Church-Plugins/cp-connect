@@ -39,33 +39,7 @@ class PCO extends ChMS {
 	}
 
 	/**
-	 * Pull tags for an event instance
-	 *
-	 * @param int $event_instance_id
-	 * @return array
-	 * @author costmo
-	 */
-	public function pull_event_tags( $event_instance_id ) {
-
-		$raw =
-			$this->api()
-				->module('calendar')
-				->table('event_instances')
-				->id( $event_instance_id )
-				->associations('tags')
-				->get();
-		if( !empty( $this->api()->errorMessage() ) ) {
-			error_log( var_export( $this->api()->errorMessage(), true ) );
-			return [];
-		}
-
-		echo "RAW TAG DATA:\n";
-		echo var_export( $raw, true ) . "\n----------\n";
-		echo "END TAG EVENT DATA:\n";
-	}
-
-	/**
-	 * Setup and register taxonopmies for incoming data
+	 * Setup and register taxonomies for incoming data
 	 *
 	 *
 	 * @param boolean $add_data		Set true to import remote data
@@ -172,6 +146,72 @@ class PCO extends ChMS {
 	}
 
 	/**
+	 * Get the details of a specific campus/location
+	 *
+	 * Names do not always match exactly, so we also try `$campus_name . ' campus'` and `$campus_name . ' campuses'`
+	 *
+	 * @param string $campus_name			The campus name to find
+	 * @return void
+	 * @author costmo
+	 */
+	public function pull_campus_details( $campus_name ) {
+
+		// The PCO API seemingly ignores all input to get a specific record
+		$raw =
+			$this->api()
+				->module('people')
+				->table('campuses')
+				->get();
+		if( !empty( $this->api()->errorMessage() ) ) {
+			error_log( var_export( $this->api()->errorMessage(), true ) );
+			return [];
+		}
+
+		if( !empty( $raw ) && is_array( $raw ) && !empty( $raw['data'] ) ) {
+			foreach( $raw['data'] as $index => $location_data ) {
+				$normal_incoming = strtolower( $campus_name );
+				$normal_loop = strtolower( $location_data['attributes']['name'] ?? '' );
+
+				if( $normal_incoming == $normal_loop ||
+					$normal_incoming . ' campus' == $normal_loop ||
+					$normal_incoming . ' campuses' == $normal_loop ) {
+
+						$return_value = $location_data['attributes'];
+						$return_value['id'] = $location_data['id'];
+						// If we found one, return it now - no need to keep iterating the loop
+						return $return_value;
+				}
+			}
+		}
+
+		return [];
+	}
+
+	/**
+	 * Pull tags for an event instance
+	 *
+	 * @param int $event_instance_id
+	 * @return array
+	 * @author costmo
+	 */
+	public function pull_event_tags( $event_instance_id ) {
+
+		$raw =
+			$this->api()
+				->module('calendar')
+				->table('event_instances')
+				->id( $event_instance_id )
+				->associations('tags')
+				->get();
+		if( !empty( $this->api()->errorMessage() ) ) {
+			error_log( var_export( $this->api()->errorMessage(), true ) );
+			return [];
+		}
+
+		return $raw['data'] ?? $raw;
+	}
+
+	/**
 	 * Get details about a specific event
 	 *
 	 * @param int $event_id
@@ -185,27 +225,38 @@ class PCO extends ChMS {
 				->module('calendar')
 				->table('events')
 				->id( $event_id )
+				->includes('owner')
 				->get();
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
 			return [];
 		}
 
-		echo "RAW EVENT DATA:\n";
-		echo var_export( $raw, true ) . "\n----------\n";
-		echo "END RAW EVENT DATA:\n";
+		$output = $raw['data'] ?? $raw;
+
+		// Normalize event owner details
+		if( !empty( $raw['included'] ) && is_array( $raw['included'] ) ) {
+			foreach( $raw['included'] as $included_data ) {
+				if( !empty( $included_data['type'] ) && 'Person' === $included_data['type'] ) {
+					$output['contact'] = $included_data['attributes'];
+				}
+			}
+		}
+
+		return $output;
 	}
 
 	/**
-	 * Pull all future published/public events from the ChMS
+	 * Pull all future published/public events from the ChMS and massage the data for WP insert
 	 *
 	 * @param array $events
+	 * @param bool $show_progress		true to show progress on the CLI
 	 * @return array
 	 * @author costmo
 	 */
-	public function pull_events( $events = [] ) {
+	public function pull_events( $events = [], $show_progress = false ) {
 
-		// Pull event instances (top-level event entries by upcoming event date)
+		// Pull upcoming events
 		$raw =
 			$this->api()
 				->module('calendar')
@@ -220,41 +271,44 @@ class PCO extends ChMS {
 			return [];
 		}
 
+		// Give massaged data somewhere to go - the return variable
 		$formatted = [];
 
+		// Collapse and normalize the response
 		$items = [];
 		if( !empty( $raw ) && is_array( $raw ) && !empty( $raw['data'] ) && is_array( $raw['data'] ) ) {
 			$items = $raw['data'];
 		}
 
-		// TODO: 1. Download tag_groups and add as taxonomies
-		// TODO: 2. Populate tags into the new taxonomies
+		if( $show_progress ) {
+			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $items ) . " events", count( $items ) );
+		}
 
+		// Iterate the received events for processing
 		foreach ( $items as $event_instance ) {
 
-			echo var_export( $event_instance, true ) . "\n";
+			if( $show_progress ) {
+				$progress->tick();
+			}
 
-			// echo var_export( $event_instance, true ) . "\n----------\n";
+			// Sanith check the event
 			$event_id = $event_instance['relationships']['event']['data']['id'] ?? 0;
 			if( empty( $event_id ) ) {
 				continue;
 			}
 
-			echo "\nPULL FOR: " . $event_id . "\n";
+			// Pull top-level event details
 			$event = $this->pull_event( $event_id );
-			$tags = $this->pull_event_tags( $event_instance['id'] );
 
-			exit();
-
+			// Begin stuffing the output
 			$start_date = strtotime( $event_instance['attributes']['starts_at'] );
 			$end_date   = strtotime( $event_instance['attributes']['ends_at'] );
-
 			$args = [
 				'chms_id'               => $event_id,
 				'post_status'           => 'publish',
-				'post_title'            => $event['data']['attributes']['name'],
-				'post_content'          => $event['data']['attributes']['description'],
-				'post_excerpt'          => $event['data']['attributes']['summary'],
+				'post_title'            => $event['attributes']['name'],
+				'post_content'          => $event['attributes']['description'],
+				'post_excerpt'          => $event['attributes']['summary'],
 				'tax_input'             => [],
 				'event_category'        => [],
 				'thumbnail_url'         => '',
@@ -272,70 +326,107 @@ class PCO extends ChMS {
 //				'EventShowMap'          => $event[''],
 //				'EventCost'             => $event[''],
 //				'EventURL'              => $event[''],
-				'FeaturedImage'         => $event['data']['attributes']['image_url'] ?? '',
+				'FeaturedImage'         => $event['attributes']['image_url'] ?? '',
 			];
 
-			if ( ! empty( $event['data']['attributes']['image_url'] ) ) {
-				$args['thumbnail_url'] = $event['data']['attributes']['image_url'];
+			// Fesatured image
+			if ( ! empty( $event['attributes']['image_url'] ) ) {
+				$args['thumbnail_url'] = $event['attributes']['image_url'];
 			}
 
+			// Generic location - a long string with an entire address
 			if ( ! empty( $event_instance['attributes']['location'] ) ) {
-				if ( $location = $this->get_location_term( $event_instance['attributes']['location'] ) ) {
-					$args['tax_input']['cp_location'] = $location;
+				$args['tax_input']['cp_location'] = $event_instance['attributes']['location'];
+			}
+
+			// Get the event's tags and pair them with appropriate taxonomies
+			$tags = $this->pull_event_tags( $event_instance['id'] );
+
+			$tag_output = [];
+			if ( ! empty( $tags ) && is_array( $tags ) ) {
+				foreach( $tags as $tag ) {
+					$tag_id = $tag['id'] ?? 0;
+					$tag_value = $tag['attributes']['name'] ?? '';
+					$tag_output[ $tag_value ] = $this->taxonomies_for_tag( $tag_value );
 				}
 			}
 
-			// PCO TODO: Campus, Ministry Group, Event Type, Frequency and Ministry Leader are tag types, but there does
-			//   not appear to be a way to differentiaite between the Type of each tag value from this end
-			if ( ! empty( $tags['data'] ) && is_array( $tags['data'] ) ) {
-				$tags = [];
-				foreach( $tags['data'] as $tag_data ) {
-					if( !empty( $tag_data ) && !empty( $tag_data['attributes'] ) && !empty( $tag_data['attributes']['name'] ) ) {
-						$tags[] = $tag_data['attributes']['name'];
+			$tax_output = [];
+			// Segragate the "tags" that have non-tag data
+			foreach( $tag_output as $tag_text => $included_taxonomies ) {
+
+				// This "tag" is a campus/location
+				if( in_array( 'campus', $included_taxonomies ) ) {
+
+					$campus =  $this->pull_campus_details( $tag_text );
+
+					// Map to Location/Venue for TEC
+					if( !empty( $campus ) && is_array( $campus ) ) {
+						$args['Venue'] = [
+							'Venue'    => $tag_text,
+							'Country'  => $campus['country'] ?? '',
+							'Address'  => $campus['street'] ?? '',
+							'City'     => $campus['city'] ?? '',
+							'State'    => $campus['state'] ?? '',
+		//					'Province' => $campus[''],
+							'Zip'      => $campus['zip'],
+		//					'Phone'    => $campus[''],
+						];
+					}
+
+				} else if( in_array( 'event type', $included_taxonomies ) ) {
+					// This is a TEC Event Category
+					$args['event_category'][] = $tag_text;
+				} else {
+
+					// This is something else - we're assuming that it's a taxonomy and that the taxonomy is already registered
+					foreach( $included_taxonomies as $loop_tax ) {
+						$args['tax_input'][ $loop_tax ] = $tag_text;
 					}
 				}
-				// TODO: Save tags for the entry
 			}
 
-// 			if ( ! empty( $event['Event_Type'] ) ) {
-// 				$args['event_category'][] = $event['Event_Type'];
-// 			}
+			// Add event contact info
+			if( !empty( $event['contact'] ) ) {
 
-// 			if ( ! empty( $event['Program_Name'] ) ) {
-// 				$args['event_category'][] = $event['Program_Name'];
-// 			}
+				// Normalize variables so they're easier to work with
+				$contact_email = $event['contact']['contact_data']['email_addresses'][0]['address'] ?? '';
+				$contact_phone = $event['contact']['contact_data']['phone_numbers'][0]['number'] ?? '';
+				$first_name = $event['contact']['first_name'] ?? '';
+				$last_name = $event['contact']['last_name'] ?? '';
+				$use_name = $first_name . ' ' . $last_name;
 
-// 			if ( ! empty( $event['First_Name'] ) ) {
-// 				$args['Organizer'] = [
-// 					'Organizer' => $event['First_Name'] . ' ' . $event['Last_Name'],
-// 					'Email'     => $event['Email_Address'],
-// //					'Website'   => $event[''],
-// //					'Phone'     => $event[''],
-// 				];
-// 			}
+				// Only include if the person is not "empty" (depending on the ChMS definition of "empty")
+				if( !empty( $first_name ) && 'no owner' !== strtolower( $use_name ) ) {
+					$args['Organizer'] = [
+						'Organizer' => $use_name,
+						'Email'     => $contact_email,
+	//					'Website'   => $event[''],
+						'Phone'     => $contact_phone,
+					];
+				}
 
-// 			if ( ! empty( $event['Location_Name'] ) ) {
-// 				$args['Venue'] = [
-// 					'Venue'    => $event['Location_Name'],
-// //					'Country'  => $event[''],
-// 					'Address'  => $event['Address_Line_1'],
-// 					'City'     => $event['City'],
-// 					'State'    => $event['State/Region'],
-// //					'Province' => $event[''],
-// 					'Zip'      => $event['Postal_Code'],
-// //					'Phone'    => $event[''],
-// 				];
-// 			}
+			}
 
-// 			$formatted[] = $args;
+			// Add the data to our output
+			$formatted[] = $args;
+		}
+		if( $show_progress ) {
+			$progress->finish();
 		}
 
-		echo "ITEM COUNT: " . count( $items ) . "\n";
-
 		return $formatted;
-
 	}
 
+	/**
+	 * Get all groups
+	 *
+	 * TODO: Not yet complete
+	 *
+	 * @param int $event_id
+	 * @return array
+	 * @author costmo
+	 */
 	public function pull_groups( $groups = [] ) {
 
 		// Pull groups here
@@ -344,8 +435,6 @@ class PCO extends ChMS {
 				->module('groups')
 				->table('groups')
 				->get();
-
-		error_log( var_export( $items, true ) );
 
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
@@ -360,7 +449,6 @@ class PCO extends ChMS {
 	 * This function introduces a single plugin menu option into the WordPress 'Plugins'
 	 * menu.
 	 */
-
 	function plugin_menu() {
 
 		add_submenu_page( 'options-general.php',
@@ -401,6 +489,12 @@ class PCO extends ChMS {
 	} // end sandbox_plugin_display
 
 
+	/**
+	 * Setup WP admin settings fields
+	 *
+	 * @return void
+	 * @author costmo
+	 */
 	function initialize_plugin_options() {
 
 		// If the options don't exist, add them
@@ -449,11 +543,25 @@ class PCO extends ChMS {
 
 	} // end ministry_platform_initialize_plugin_options
 
+	/**
+	 * Admin info string
+	 *
+	 * @return void
+	 * @author costmo
+	 */
 	function general_options_callback() {
 		echo '<p>The following parameters are required to authenticate to the API and then execute API calls to Planning Center Online.</p><p>You can get your authentication credentials by <a target="_blank" href="https://api.planningcenteronline.com/oauth/applications">clicking here</a> and scrolling down to "Personal Access Tokens"</p>';
 	}
 
 
+	/**
+	 * Get the stored value of an option for admin
+	 *
+	 * @param string $key
+	 * @param boolean $options
+	 * @return void
+	 * @author costmo
+	 */
 	function get_option_value( $key, $options = false ) {
 
 		if ( ! $options ) {
@@ -468,9 +576,15 @@ class PCO extends ChMS {
 		// If the key is in the array, return the value, else return empty string.
 
 		return array_key_exists( $key, $options ) ? $options[ $key ] : '';
-
 	}
 
+	/**
+	 * Render Application ID admin input
+	 *
+	 * @param array $args
+	 * @return void
+	 * @author costmo
+	 */
 	function pco_app_id_callback( $args ) {
 
 		$options = get_option( 'pco_plugin_options' );
@@ -485,6 +599,13 @@ class PCO extends ChMS {
 
 	} // end pco_app_id_callback
 
+	/**
+	 * Render Application Secret admin input
+	 *
+	 * @param array $args
+	 * @return void
+	 * @author costmo
+	 */
 	function pco_app_secret_callback( $args ) {
 
 		$options = get_option( 'pco_plugin_options' );
@@ -533,6 +654,38 @@ class PCO extends ChMS {
 		}
 
 		return $this->api;
+	}
+
+	/**
+	 * Return the PCO-related taxonomies that hold the input value
+	 *
+	 * @param string $tag			The tag/term to find
+	 * @return void
+	 * @author costmo
+	 */
+	protected function taxonomies_for_tag( $tag ) {
+
+		// TODO: This needs to be more dynamic
+		$taxonomies = [
+			'Campus' 			=> false,
+			'Ministry Group' 	=> false,
+			'Event Type' 		=> false,
+			'Frequency' 		=> false,
+			'Ministry Leader' 	=> false
+		];
+
+		$in_tax = [];
+		foreach( $taxonomies as $tax => $ignored ) {
+
+			$tax = strtolower( $tax );
+			$exists = term_exists( $tag, $tax );
+			if( !empty( $exists ) ) {
+				$in_tax[] = $tax;
+			}
+
+		}
+
+		return $in_tax;
 	}
 
 }

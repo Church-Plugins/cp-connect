@@ -34,4 +34,20 @@ class PCO_CLI {
 		$pco->setup_taxonomies( true );
 		\WP_CLI::success( "DONE" );
 	}
+
+
+	/**
+	 * Initial data pull
+	 *
+	 * @param array $args				Ignored
+	 * @param array $assoc_args			Ignored
+	 * @return void
+	 * @author costmo
+	 */
+	public function test_it( $args, $assoc_args ) {
+
+		$pco = PCO::get_instance();
+		$pco->pull_events( [], true );
+		\WP_CLI::success( "DONE" );
+	}
 }
