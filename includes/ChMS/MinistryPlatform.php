@@ -124,6 +124,7 @@ class MinistryPlatform extends ChMS {
 			return false;
 		}
 
+		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" );
 		$groups = $mp->table( 'Groups' )
 		             ->select( "Group_ID, Group_Name, Group_Type_ID_Table.[Group_Type], Groups.Congregation_ID,
 		             Primary_Contact_Table.[First_Name], Primary_Contact_Table.[Last_Name], Groups.Description,
@@ -131,7 +132,7 @@ class MinistryPlatform extends ChMS {
 		             Offsite_Meeting_Address_Table.[Postal_Code],Offsite_Meeting_Address_Table.[Address_Line_1],Offsite_Meeting_Address_Table.[City],
 		             Offsite_Meeting_Address_Table.[State/Region],
 		             Meeting_Time, Meeting_Day_ID_Table.[Meeting_Day], Meeting_Frequency_ID_Table.[Meeting_Frequency], dp_fileUniqueId as Image_ID" )
-		             ->filter( "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" )
+		             ->filter( $filter )
 		             ->get();
 		
 		$formatted = [];
