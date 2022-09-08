@@ -106,6 +106,7 @@ class PCO extends ChMS {
 
 		foreach( $output as $tax_name => $tax_data ) {
 
+			$tax_slug = ChMS::string_to_slug( $tax_name );
 			$labels = [
 				'name'              => ucwords( $tax_name ),
 				'singular_name'     => ucwords( $tax_name ),
@@ -133,13 +134,14 @@ class PCO extends ChMS {
 				'show_in_nav_menus' => false,
 				'show_tag_cloud'    => true,
 				'show_admin_column' => false,
+				'slug'				=> $tax_slug
 			];
 
-			register_taxonomy( strtolower( $tax_name ), 'tribe_events', $args );
+			register_taxonomy( $tax_slug, 'tribe_events', $args );
 
 			if( $add_data && !empty( $tax_data ) ) {
 				foreach( $tax_data as $term ) {
-					wp_insert_term( $term, $tax_name );
+					wp_insert_term( $term, $tax_slug );
 				}
 			}
 		}
@@ -256,6 +258,8 @@ class PCO extends ChMS {
 	 */
 	public function pull_events( $events = [], $show_progress = false ) {
 
+		error_log( "PULL EVENTS STARTED" );
+
 		// Pull upcoming events
 		$raw =
 			$this->api()
@@ -284,6 +288,7 @@ class PCO extends ChMS {
 			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $items ) . " events", count( $items ) );
 		}
 
+		$counter = 0;
 		// Iterate the received events for processing
 		foreach ( $items as $event_instance ) {
 
@@ -306,9 +311,9 @@ class PCO extends ChMS {
 			$args = [
 				'chms_id'               => $event_id,
 				'post_status'           => 'publish',
-				'post_title'            => $event['attributes']['name'],
-				'post_content'          => $event['attributes']['description'],
-				'post_excerpt'          => $event['attributes']['summary'],
+				'post_title'            => $event['attributes']['name'] ?? '',
+				'post_content'          => $event['attributes']['description'] ?? '',
+				'post_excerpt'          => $event['attributes']['summary'] ?? '',
 				'tax_input'             => [],
 				'event_category'        => [],
 				'thumbnail_url'         => '',
@@ -374,7 +379,7 @@ class PCO extends ChMS {
 						];
 					}
 
-				} else if( in_array( 'event type', $included_taxonomies ) ) {
+				} else if( in_array( 'event_type', $included_taxonomies ) ) {
 					// This is a TEC Event Category
 					$args['event_category'][] = $tag_text;
 				} else {
@@ -410,6 +415,11 @@ class PCO extends ChMS {
 
 			// Add the data to our output
 			$formatted[] = $args;
+
+			$counter++;
+			if( $counter > 5 ) {
+				return $formatted;
+			}
 		}
 		if( $show_progress ) {
 			$progress->finish();
@@ -667,11 +677,11 @@ class PCO extends ChMS {
 
 		// TODO: This needs to be more dynamic
 		$taxonomies = [
-			'Campus' 			=> false,
-			'Ministry Group' 	=> false,
-			'Event Type' 		=> false,
-			'Frequency' 		=> false,
-			'Ministry Leader' 	=> false
+			'campus' 			=> false,
+			'ministry_group' 	=> false,
+			'event_type' 		=> false,
+			'frequency' 		=> false,
+			'ministry_leader' 	=> false
 		];
 
 		$in_tax = [];

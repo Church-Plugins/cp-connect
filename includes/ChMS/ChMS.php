@@ -131,4 +131,14 @@ abstract class ChMS {
 
 		return $options;
 	}
+
+	/**
+	 * Utility to turn an aribratray string into a useable slug
+	 *
+	 * @param string $string
+	 * @return string
+	 */
+	public static function string_to_slug( $string ) {
+		return str_replace( " ", "_", strtolower( $string ) );
+	}
 }
