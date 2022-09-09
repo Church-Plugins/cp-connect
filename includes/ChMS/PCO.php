@@ -288,7 +288,7 @@ class PCO extends ChMS {
 			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $items ) . " events", count( $items ) );
 		}
 
-		$counter = 0;
+		// $counter = 0;
 		// Iterate the received events for processing
 		foreach ( $items as $event_instance ) {
 
@@ -416,10 +416,10 @@ class PCO extends ChMS {
 			// Add the data to our output
 			$formatted[] = $args;
 
-			$counter++;
-			if( $counter > 5 ) {
-				return $formatted;
-			}
+			// $counter++;
+			// if( $counter > 5 ) {
+			// 	return $formatted;
+			// }
 		}
 		if( $show_progress ) {
 			$progress->finish();
@@ -429,9 +429,31 @@ class PCO extends ChMS {
 	}
 
 	/**
-	 * Get all groups
+	 * Pull details about a specific group from PCO
 	 *
-	 * TODO: Not yet complete
+	 * @param int $group_id
+	 * @return array
+	 * @author costmo
+	 */
+	public function pull_group_details( $group_id ) {
+
+		$raw =
+		$this->api()
+			->module('groups')
+			->table('groups')
+			->id( $group_id )
+			->includes('location,group_type')
+			->get();
+
+		if( !empty( $this->api()->errorMessage() ) ) {
+			error_log( var_export( $this->api()->errorMessage(), true ) );
+		}
+
+		return $raw['included'] ?? [];
+	}
+
+	/**
+	 * Get all groups from PCO
 	 *
 	 * @param int $event_id
 	 * @return array
@@ -439,19 +461,104 @@ class PCO extends ChMS {
 	 */
 	public function pull_groups( $groups = [] ) {
 
+		error_log( "PULL GROUPS STARTED" );
+
 		// Pull groups here
-		$items =
+		$raw =
 			$this->api()
 				->module('groups')
 				->table('groups')
+				->includes('location,group_type')
 				->get();
 
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
 		}
 
+		// Give massaged data somewhere to go - the return variable
+		$formatted = [];
+
+		// Collapse and normalize the response
+		$items = [];
+		if( !empty( $raw ) && is_array( $raw ) && !empty( $raw['data'] ) && is_array( $raw['data'] ) ) {
+			$items = $raw['data'];
+		}
 
 		$formatted = [];
+
+		// $counter = 0;
+		foreach( $items as $group ) {
+
+			$item_details = $this->pull_group_details( $group['id'] ?? 0 );
+
+			$start_date = strtotime( $group['attributes']['created_at'] ?? null );
+			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
+
+			$args = [
+				'chms_id'          => $group['id'],
+				'post_status'      => 'publish',
+				'post_title'       => $group['attributes']['name'] ?? '',
+				'post_content'     => $group['attributes']['description'] ?? '',
+				'tax_input'        => [],
+				// 'group_category'   => [],
+				'group_type'       => [],
+				// 'group_life_stage' => [],
+				'meta_input'       => [
+					'leader'     => $group['attributes']['contact_email'] ?? '',
+					'start_date' => date( 'Y-m-d', $start_date ),
+					'end_date'   => !empty( $end_date ) ? date( 'Y-m-d', $end_date ) : null,
+				],
+				'thumbnail_url'    => $group['attributes']['header_image']['original'] ?? '',
+				// 'break' => 11,
+			];
+
+			if ( !empty( $group['attributes']['schedule'] ) ) {
+				$args['meta_input']['frequency'] = $group['attributes']['schedule'];
+			}
+
+			foreach( $item_details as $index => $item_data ) {
+
+				$type = $item_data['type'] ?? '';
+
+				if( 'GroupType' === $type ) {
+					$args['group_type'][] = $item_data['attributes']['name'] ?? '';
+				} else if( 'Location' === $type ) {
+					// TODO: Maybe pull location information from $group['relationships']['location']['data']['id']
+					$args['meta_input']['location'] = $item_data['attributes']['full_formatted_address'] ?? '';
+				}
+			}
+
+			// TODO: Look this up
+			// if ( !empty( $group['Meeting_Time'] ) ) {
+			// 	$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $group['Meeting_Time'] ) );
+
+			// 	if ( ! empty( $group['Meeting_Day'] ) ) {
+			// 		$args['meta_input']['time_desc'] = $group['Meeting_Day'] . 's at ' . $args['meta_input']['time_desc'];
+			// 		$args['meta_input']['meeting_day'] = $group['Meeting_Day'];
+			// 	}
+			// }
+
+			// TODO: Look this up
+			// if ( ! empty( $group['Congregation_ID'] ) ) {
+			// 	if ( $location = $this->get_location_term( $group['Congregation_ID'] ) ) {
+			// 		$args['tax_input']['cp_location'] = $location;
+			// 	}
+			// }
+
+			// Not for PCO
+			$args['group_category'] = []; // Is this different than group_type for PCO?
+
+			// Not for PCO
+			$args['group_life_stage'] = [];
+
+			$formatted[] = $args;
+
+			// $counter++;
+			// if( $counter > 5 ) {
+			// 	return $formatted;
+			// }
+		}
+
 		return $formatted;
 	}
 
