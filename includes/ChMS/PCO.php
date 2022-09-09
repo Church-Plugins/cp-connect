@@ -29,6 +29,7 @@ class PCO extends ChMS {
 
 		// If this integration is not configured, do not add our pull filters
 		if( true === $this->load_connection_parameters() ) {
+			$this->maybe_setup_taxonomies();
 			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		}
@@ -36,6 +37,45 @@ class PCO extends ChMS {
 		$this->setup_taxonomies( false );
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
+	}
+
+	/**
+	 * Setup foundational taxonomy data from the remote source if we do not have any such data locally
+	 *
+	 * @return void
+	 * @author costmo
+	 */
+	private function maybe_setup_taxonomies() {
+
+		global $wpdb;
+
+		// Search for the existence of a single taxonomy to determine if we've already done this
+		$test_tax = 'ministry_leader';
+		$have_data = false;
+
+
+		// This function hits before the 'Init' hook, so `taxonomy_exists()` will
+		//    always return false. Direct query required.
+		$prepared = $wpdb->prepare(
+			"SELECT		COUNT(*) as count
+			 FROM		" . $wpdb->prefix . "term_taxonomy
+			 WHERE		taxonomy = %s",
+			 $test_tax
+		);
+		$results = $wpdb->get_results( $prepared );
+		if( !empty( $results ) && is_array( $results ) ) {
+			foreach( $results as $row ) {
+				if( $row && is_object( $row ) && !empty( $row->count ) ) {
+					$have_data = true;
+				}
+			}
+		}
+
+		// We have no data, populate it now
+		if( !$have_data ) {
+			$this->setup_taxonomies( true );
+		}
+		return;
 	}
 
 	/**
@@ -288,7 +328,7 @@ class PCO extends ChMS {
 			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $items ) . " events", count( $items ) );
 		}
 
-		// $counter = 0;
+		$counter = 0;
 		// Iterate the received events for processing
 		foreach ( $items as $event_instance ) {
 
@@ -416,10 +456,10 @@ class PCO extends ChMS {
 			// Add the data to our output
 			$formatted[] = $args;
 
-			// $counter++;
-			// if( $counter > 5 ) {
-			// 	return $formatted;
-			// }
+			$counter++;
+			if( $counter > 20 ) {
+				return $formatted;
+			}
 		}
 		if( $show_progress ) {
 			$progress->finish();
@@ -486,7 +526,7 @@ class PCO extends ChMS {
 
 		$formatted = [];
 
-		// $counter = 0;
+		$counter = 0;
 		foreach( $items as $group ) {
 
 			$item_details = $this->pull_group_details( $group['id'] ?? 0 );
@@ -553,7 +593,7 @@ class PCO extends ChMS {
 
 			$formatted[] = $args;
 
-			// $counter++;
+			$counter++;
 			// if( $counter > 5 ) {
 			// 	return $formatted;
 			// }

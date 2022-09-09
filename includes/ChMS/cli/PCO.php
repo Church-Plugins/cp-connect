@@ -47,9 +47,11 @@ class PCO_CLI {
 	public function test_it( $args, $assoc_args ) {
 
 		$pco = PCO::get_instance();
-		// $events = $pco->pull_events( [], true );
-		$groups = $pco->pull_groups( [] );
-		\WP_CLI::log( var_export( $groups, true ) );
+
+		$items = $pco->pull_events( [], true );
+		// $items = $pco->pull_groups( [] );
+
+		\WP_CLI::log( var_export( $items, true ) );
 		\WP_CLI::success( "DONE" );
 	}
 }
