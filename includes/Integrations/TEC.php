@@ -55,7 +55,7 @@ class TEC extends Integration {
 		wp_set_post_terms( $id, $categories, 'tribe_events_cat' );
 
 		// Custom taxonomies
-		$taxonomies = [ 'Ministry Group', 'Ministry Leader', 'Frequency', 'cp_location' ];
+		$taxonomies = [ 'Ministry Group', 'Ministry Leader', 'Frequency', 'cp_location', 'cp_ministry' ];
 		foreach( $taxonomies as $tax ) {
 			$tax_slug = \CP_Connect\ChMS\ChMS::string_to_slug( $tax );
 			$categories = [];
@@ -69,7 +69,7 @@ class TEC extends Integration {
 						$term = wp_insert_term( $term_value, $tax_slug );
 					}
 					if( !is_wp_error( $term ) ) {
-						$categories[] = $term_value;
+						$categories[] = $term['term_id'];
 					}
 
 				} else if( is_array( $item['tax_input'][$tax_slug] ) ) {

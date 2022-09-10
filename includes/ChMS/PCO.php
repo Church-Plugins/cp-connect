@@ -298,7 +298,7 @@ class PCO extends ChMS {
 	 */
 	public function pull_events( $events = [], $show_progress = false ) {
 
-		error_log( "PULL EVENTS STARTED" );
+		error_log( "PULL EVENTS STARTED " . date( 'Y-m-d H:i:s' ) );
 
 		// Pull upcoming events
 		$raw =
@@ -345,9 +345,13 @@ class PCO extends ChMS {
 			// Pull top-level event details
 			$event = $this->pull_event( $event_id );
 
+			$start_date = new \DateTime( $event_instance['attributes']['starts_at'] );
+			$end_date   = new \DateTime( $event_instance['attributes']['ends_at'] );
+			
+			$start_date->setTimezone( wp_timezone() );
+			$end_date->setTimezone( wp_timezone() );
+			
 			// Begin stuffing the output
-			$start_date = strtotime( $event_instance['attributes']['starts_at'] );
-			$end_date   = strtotime( $event_instance['attributes']['ends_at'] );
 			$args = [
 				'chms_id'               => $event_id,
 				'post_status'           => 'publish',
@@ -357,14 +361,14 @@ class PCO extends ChMS {
 				'tax_input'             => [],
 				'event_category'        => [],
 				'thumbnail_url'         => '',
-				'EventStartDate'        => date( 'Y-m-d', $start_date ),
-				'EventEndDate'          => date( 'Y-m-d', $end_date ),
+				'EventStartDate'        => $start_date->format( 'Y-m-d' ),
+				'EventEndDate'          => $end_date->format( 'Y-m-d' ),
 //				'EventAllDay'           => $event[''],
-				'EventStartHour'        => date( 'G', $start_date ),
-				'EventStartMinute'      => date( 'i', $start_date ),
+				'EventStartHour'        => $start_date->format( 'G' ),
+				'EventStartMinute'      => $start_date->format( 'i' ),
 //				'EventStartMeridian'    => $event[''],
-				'EventEndHour'          => date( 'G', $end_date ),
-				'EventEndMinute'        => date( 'i', $end_date ),
+				'EventEndHour'          => $end_date->format( 'G' ),
+				'EventEndMinute'        => $end_date->format( 'i' ),
 //				'EventEndMeridian'      => $event[''],
 //				'EventHideFromUpcoming' => $event[''],
 //				'EventShowMapLink'      => $event[''],
@@ -380,9 +384,9 @@ class PCO extends ChMS {
 			}
 
 			// Generic location - a long string with an entire address
-			if ( ! empty( $event_instance['attributes']['location'] ) ) {
-				$args['tax_input']['cp_location'] = $event_instance['attributes']['location'];
-			}
+//			if ( ! empty( $event_instance['attributes']['location'] ) ) {
+//				$args['tax_input']['cp_location'] = $event_instance['attributes']['location'];
+//			}
 
 			// Get the event's tags and pair them with appropriate taxonomies
 			$tags = $this->pull_event_tags( $event_instance['id'] );
@@ -422,6 +426,9 @@ class PCO extends ChMS {
 				} else if( in_array( 'event_type', $included_taxonomies ) ) {
 					// This is a TEC Event Category
 					$args['event_category'][] = $tag_text;
+				} else if( in_array( 'ministry_group', $included_taxonomies ) ) {
+					// This is a TEC Event Category
+					$args['tax_input']['cp_ministry'] = $tag_text;
 				} else {
 
 					// This is something else - we're assuming that it's a taxonomy and that the taxonomy is already registered
@@ -456,14 +463,16 @@ class PCO extends ChMS {
 			// Add the data to our output
 			$formatted[] = $args;
 
-			$counter++;
-			if( $counter > 20 ) {
-				return $formatted;
-			}
+//			$counter++;
+//			if( $counter > 20 ) {
+//				return $formatted;
+//			}
 		}
 		if( $show_progress ) {
 			$progress->finish();
 		}
+		
+		error_log( "PULL EVENTS FINISHED " . date( 'Y-m-d H:i:s') );
 
 		return $formatted;
 	}
