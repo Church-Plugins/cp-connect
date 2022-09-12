@@ -76,7 +76,7 @@ class MinistryPlatform extends ChMS {
 			];
 			
 			if ( ! empty( $event['Image_ID'] ) ) {
-				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?ext=.jpeg';
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?mpevent-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
 			
 			if ( ! empty( $event['Congregation_ID'] ) ) {
@@ -166,7 +166,7 @@ class MinistryPlatform extends ChMS {
 			];
 			
 			if ( ! empty( $group['Image_ID'] ) ) {
-				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $group['Image_ID'] . '?ext=.jpeg';
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $group['Image_ID'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
 			
 			if ( !empty( $group['Meeting_Frequency'] ) ) {
