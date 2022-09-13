@@ -388,7 +388,7 @@ class PCO extends ChMS {
 			$start_date = new \DateTime( $event_instance['attributes']['starts_at'] );
 			$end_date   = new \DateTime( $event_instance['attributes']['ends_at'] );
 			
-			$start_date->setTimezone( wp_timezone() );
+		$start_date->setTimezone( wp_timezone() );
 			$end_date->setTimezone( wp_timezone() );
 			
 			// Begin stuffing the output
@@ -582,24 +582,24 @@ class PCO extends ChMS {
 			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
 
 			$args = [
-				'chms_id'          => $group['id'],
-				'post_status'      => 'publish',
-				'post_title'       => $group['attributes']['name'] ?? '',
-				'post_content'     => $group['attributes']['description'] ?? '',
-				'tax_input'        => [],
+				'chms_id'       => $group['id'],
+				'post_status'   => 'publish',
+				'post_title'    => $group['attributes']['name'] ?? '',
+				'post_content'  => $group['attributes']['description'] ?? '',
+				'tax_input'     => [],
 				// 'group_category'   => [],
-				'group_type'       => [],
+				'group_type'    => [],
 				// 'group_life_stage' => [],
-				'meta_input'       => [
+				'meta_input'    => [
 					'leader'     => $group['attributes']['contact_email'] ?? '',
 					'start_date' => date( 'Y-m-d', $start_date ),
-					'end_date'   => !empty( $end_date ) ? date( 'Y-m-d', $end_date ) : null,
+					'end_date'   => ! empty( $end_date ) ? date( 'Y-m-d', $end_date ) : null,
+					'public_url' => $group['attributes']['public_church_center_web_url'] ?? '',
 				],
-				'thumbnail_url'    => $group['attributes']['header_image']['original'] ?? '',
-				// 'break' => 11,
+				'thumbnail_url' => $group['attributes']['header_image']['original'] ?? '',
 			];
 
-			if ( !empty( $group['attributes']['schedule'] ) ) {
+			if ( ! empty( $group['attributes']['schedule'] ) ) {
 				$args['meta_input']['frequency'] = $group['attributes']['schedule'];
 			}
 
@@ -613,19 +613,23 @@ class PCO extends ChMS {
 					$args['group_type'][] = $item_data['attributes']['name'] ?? '';
 				} else if( 'Location' === $type ) {
 					// TODO: Maybe pull location information from $group['relationships']['location']['data']['id']
-					$args['meta_input']['location'] = $item_data['attributes']['full_formatted_address'] ?? '';
+					if ( 'exact' == $item_data['attributes']['display_preference'] )  {
+						$args['meta_input']['location'] = $item_data['attributes']['full_formatted_address'] ?? '';
+					} else {
+						$args['meta_input']['location'] = $item_data['attributes']['name'] ?? '';
+					}
 				}
 			}
 
 			// TODO: Look this up
-			// if ( !empty( $group['Meeting_Time'] ) ) {
-			// 	$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $group['Meeting_Time'] ) );
+			 if ( ! empty( $group['attributes']['schedule'] ) ) {
+			 	$args['meta_input']['time_desc'] = $group['attributes']['schedule'];
 
 			// 	if ( ! empty( $group['Meeting_Day'] ) ) {
 			// 		$args['meta_input']['time_desc'] = $group['Meeting_Day'] . 's at ' . $args['meta_input']['time_desc'];
 			// 		$args['meta_input']['meeting_day'] = $group['Meeting_Day'];
 			// 	}
-			// }
+			 }
 
 			// TODO: Look this up
 			// if ( ! empty( $group['Congregation_ID'] ) ) {
