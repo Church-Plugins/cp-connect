@@ -29,7 +29,7 @@ private static $installed = array (
     'aliases' => 
     array (
     ),
-    'reference' => '0230b27392382138c76d96136bf67affb21a6134',
+    'reference' => '9787e6da9850c4c76737a97ce899052584b3126d',
     'name' => 'churchplugins/cp-connect',
   ),
   'versions' => 
@@ -41,16 +41,25 @@ private static $installed = array (
       'aliases' => 
       array (
       ),
-      'reference' => '0230b27392382138c76d96136bf67affb21a6134',
+      'reference' => '9787e6da9850c4c76737a97ce899052584b3126d',
     ),
     'composer/installers' => 
     array (
-      'pretty_version' => 'v2.1.1',
-      'version' => '2.1.1.0',
+      'pretty_version' => 'v2.2.0',
+      'version' => '2.2.0.0',
       'aliases' => 
       array (
       ),
-      'reference' => 'af93ba6e52236418f07a278033eba6959ee5b983',
+      'reference' => 'c29dc4b93137acb82734f672c37e029dfbd95b35',
+    ),
+    'deliciousbrains/wp-background-processing' => 
+    array (
+      'pretty_version' => '1.0.2',
+      'version' => '1.0.2.0',
+      'aliases' => 
+      array (
+      ),
+      'reference' => '2cbee1abd1b49e1133cd8f611df4d4fc5a8b9800',
     ),
     'doctrine/inflector' => 
     array (
@@ -72,12 +81,12 @@ private static $installed = array (
     ),
     'guzzlehttp/promises' => 
     array (
-      'pretty_version' => '1.5.1',
-      'version' => '1.5.1.0',
+      'pretty_version' => '1.5.2',
+      'version' => '1.5.2.0',
       'aliases' => 
       array (
       ),
-      'reference' => 'fe752aedc9fd8fcca3fe7ad05d419d32998a06da',
+      'reference' => 'b94b2807d85443f9719887892882d0329d1e2598',
     ),
     'guzzlehttp/psr7' => 
     array (
@@ -135,12 +144,12 @@ private static $installed = array (
     ),
     'nesbot/carbon' => 
     array (
-      'pretty_version' => '2.61.0',
-      'version' => '2.61.0.0',
+      'pretty_version' => '2.62.1',
+      'version' => '2.62.1.0',
       'aliases' => 
       array (
       ),
-      'reference' => 'bdf4f4fe3a3eac4de84dbec0738082a862c68ba6',
+      'reference' => '01bc4cdefe98ef58d1f9cb31bdbbddddf2a88f7a',
     ),
     'psr/container' => 
     array (
@@ -268,12 +277,12 @@ private static $installed = array (
     ),
     'symfony/translation' => 
     array (
-      'pretty_version' => 'v5.4.11',
-      'version' => '5.4.11.0',
+      'pretty_version' => 'v5.4.12',
+      'version' => '5.4.12.0',
       'aliases' => 
       array (
       ),
-      'reference' => '7a1a8f6bbff269f434a83343a0a5d36a4f8cfa21',
+      'reference' => '42ecc77eb4f229ce2df702a648ec93b8478d76ae',
     ),
     'symfony/translation-contracts' => 
     array (

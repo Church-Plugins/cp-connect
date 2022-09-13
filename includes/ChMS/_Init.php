@@ -2,6 +2,8 @@
 
 namespace CP_Connect\ChMS;
 
+require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/cli/PCO.php" );
+
 /**
  * Setup integration initialization
  */
@@ -14,8 +16,8 @@ class _Init {
 
 	/**
 	 * The string to use for the cron pull
-	 * 
-	 * @var string 
+	 *
+	 * @var string
 	 */
 	public static $_cron_hook = 'cp_connect_chms_pull';
 
@@ -37,7 +39,6 @@ class _Init {
 	 *
 	 */
 	protected function __construct() {
-		$this->includes();
 		$this->actions();
 	}
 
@@ -46,19 +47,29 @@ class _Init {
 	 *
 	 * @return void
 	 */
-	protected function includes() {
-		MinistryPlatform::get_instance();
+	public function includes() {
+		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+		
+		switch( $active_chms ) {
+			case 'mp':
+				MinistryPlatform::get_instance();
+				break;
+			case 'pco' :
+				$pco = PCO::get_instance();
+				break;
+		}
 	}
 
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ] );
+		add_action( 'init', [ $this, 'includes' ] );
 	}
 
 	/** Actions ***************************************************/
 
 	/**
 	 * Schedule the cron to pull data from the ChMS
-	 * 
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -72,7 +83,7 @@ class _Init {
 			'timestamp' => time(),
 			'recurrence' => 'hourly',
 		] );
-		
+
 		wp_schedule_event( $args[ 'timestamp' ], $args['recurrence'], self::$_cron_hook );
 	}
 

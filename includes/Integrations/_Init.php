@@ -71,7 +71,7 @@ class _Init {
 	 * @author Tanner Moushey
 	 */
 	public function schedule_cron() {
-		if ( is_admin() && isset( $_GET['cp-connect-pull'] ) ) {
+		if ( is_admin() && isset( $_REQUEST['cp-connect-pull'] ) ) {
 			do_action( self::$_cron_hook );
 		}
 
