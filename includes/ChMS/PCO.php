@@ -374,7 +374,7 @@ class PCO extends ChMS {
 				->module('calendar')
 				->table('event_instances')
 				->includes('event')
-				->filter('future,approved')
+				->filter('future')
 				->order('starts_at')
 				->get();
 		
@@ -456,12 +456,13 @@ class PCO extends ChMS {
 //				'EventShowMap'          => $event[''],
 //				'EventCost'             => $event[''],
 //				'EventURL'              => $event[''],
-				'FeaturedImage'         => $event['attributes']['image_url'] ?? '',
+//				'FeaturedImage'         => $event['attributes']['image_url'] ?? '',
 			];
 
 			// Fesatured image
 			if ( ! empty( $event['attributes']['image_url'] ) ) {
-				$args['thumbnail_url'] = $event['attributes']['image_url'] . '&tecevent-' . sanitize_title( $args['post_title'] ) . '.jpeg';;
+				$url = explode( '?', $event['attributes']['image_url'], 2 );
+				$args['thumbnail_url'] = $url[0] . '?tecevent-' . sanitize_title( $args['post_title'] ) . '.jpeg&' . $url[1];
 			}
 
 			// Generic location - a long string with an entire address
