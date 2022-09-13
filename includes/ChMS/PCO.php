@@ -542,7 +542,7 @@ class PCO extends ChMS {
 			}
 
 			// Add the data to our output
-			$formatted[] = $args;
+			$formatted[] = apply_filters( 'cp_connect_pco_event_args', $args );
 
 //			$counter++;
 //			if( $counter > 20 ) {
