@@ -41,6 +41,44 @@ class PCO extends ChMS {
 		$this->setup_taxonomies( false );
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
+		add_action( 'cp_tec_update_item_after', [ $this, 'event_taxonomies' ], 10, 2 );
+	}
+	
+	public function event_taxonomies( $item, $id ) {
+		$taxonomies = [ 'Ministry Group', 'Ministry Leader', 'Frequency', 'cp_ministry' ];
+		foreach( $taxonomies as $tax ) {
+			$tax_slug = \CP_Connect\ChMS\ChMS::string_to_slug( $tax );
+			$categories = [];
+
+			if( !empty( $item['tax_input'][$tax_slug] ) ) {
+				$term_value = '';
+				if( is_string( $item['tax_input'][$tax_slug] ) ) {
+
+					$term_value = $item['tax_input'][$tax_slug];
+					if( ! $term = term_exists( $term_value, $tax_slug ) ) {
+						$term = wp_insert_term( $term_value, $tax_slug );
+					}
+					if( !is_wp_error( $term ) ) {
+						$categories[] = $term['term_id'];
+					}
+
+				} else if( is_array( $item['tax_input'][$tax_slug] ) ) {
+
+					foreach( $item['tax_input'][$tax_slug] as $term_value ) {
+
+						if ( !$term = term_exists( $term_value, $tax_slug ) ) {
+							$term = wp_insert_term( $term_value, $tax_slug );
+						}
+						if( !is_wp_error( $term ) ) {
+							$categories[] = $term_value;
+						}
+					}
+
+				}
+
+				wp_set_post_terms( $id, $categories, $tax_slug );
+			}
+		}
 	}
 
 	/**
@@ -387,13 +425,13 @@ class PCO extends ChMS {
 
 			$start_date = new \DateTime( $event_instance['attributes']['starts_at'] );
 			$end_date   = new \DateTime( $event_instance['attributes']['ends_at'] );
-			
-		$start_date->setTimezone( wp_timezone() );
+
+			$start_date->setTimezone( wp_timezone() );
 			$end_date->setTimezone( wp_timezone() );
 			
 			// Begin stuffing the output
 			$args = [
-				'chms_id'        => $event_id,
+				'chms_id'        => $event_instance['id'],
 				'post_status'    => 'publish',
 				'post_title'     => $event['attributes']['name'] ?? '',
 				'post_content'   => $event['attributes']['description'] ?? '',
@@ -423,7 +461,7 @@ class PCO extends ChMS {
 
 			// Fesatured image
 			if ( ! empty( $event['attributes']['image_url'] ) ) {
-				$args['thumbnail_url'] = $event['attributes']['image_url'];
+				$args['thumbnail_url'] = $event['attributes']['image_url'] . '&tecevent-' . sanitize_title( $args['post_title'] ) . '.jpeg';;
 			}
 
 			// Generic location - a long string with an entire address
