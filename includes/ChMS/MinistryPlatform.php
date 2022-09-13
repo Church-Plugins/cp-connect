@@ -7,11 +7,10 @@ use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
 class MinistryPlatform extends ChMS {
 
 	public function integrations() {
-
-		if( true === $this->load_connection_parameters() ) {
-			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
-		}
+		$this->mpLoadConnectionParameters();
+		
+		add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
+		add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
@@ -26,14 +25,14 @@ class MinistryPlatform extends ChMS {
 		}
 
 		$events = $mp->table( 'Events' )
-		             ->select( "Event_ID, Event_Title, Events.Congregation_ID, Event_Type_ID_Table.[Event_Type],
-		             Congregation_ID_Table.[Congregation_Name], Events.Location_ID, Location_ID_Table.[Location_Name],
-		             Location_ID_Table_Address_ID_Table.[Address_Line_1], Location_ID_Table_Address_ID_Table.[Address_Line_2],
-		             Location_ID_Table_Address_ID_Table.[City], Location_ID_Table_Address_ID_Table.[State/Region],
-		             Location_ID_Table_Address_ID_Table.[Postal_Code], Meeting_Instructions, Events.Description, Events.Program_ID,
-		             Program_ID_Table.[Program_Name], Events.Primary_Contact, Primary_Contact_Table.[First_Name],
-		             Primary_Contact_Table.[Last_Name], Primary_Contact_Table.[Email_Address], Event_Start_Date, Event_End_Date,
-		             Visibility_Level_ID, Featured_On_Calendar, Events.Show_On_Web, Online_Registration_Product, Registration_Form,
+		             ->select( "Event_ID, Event_Title, Events.Congregation_ID, Event_Type_ID_Table.[Event_Type], 
+		             Congregation_ID_Table.[Congregation_Name], Events.Location_ID, Location_ID_Table.[Location_Name], 
+		             Location_ID_Table_Address_ID_Table.[Address_Line_1], Location_ID_Table_Address_ID_Table.[Address_Line_2], 
+		             Location_ID_Table_Address_ID_Table.[City], Location_ID_Table_Address_ID_Table.[State/Region], 
+		             Location_ID_Table_Address_ID_Table.[Postal_Code], Meeting_Instructions, Events.Description, Events.Program_ID, 
+		             Program_ID_Table.[Program_Name], Events.Primary_Contact, Primary_Contact_Table.[First_Name], 
+		             Primary_Contact_Table.[Last_Name], Primary_Contact_Table.[Email_Address], Event_Start_Date, Event_End_Date, 
+		             Visibility_Level_ID, Featured_On_Calendar, Events.Show_On_Web, Online_Registration_Product, Registration_Form, 
 		             Registration_Start, Registration_End, Registration_Active, _Web_Approved, dp_fileUniqueId as Image_ID" )
 		             ->filter( "Events.Show_On_Web = 'TRUE' AND Events._Web_Approved = 'TRUE' AND Events.Visibility_Level_ID = 4 AND Events.Event_End_Date >= getdate()" )
 		             ->get();
@@ -75,17 +74,17 @@ class MinistryPlatform extends ChMS {
 				//				'EventURL'              => $event[''],
 				//				'FeaturedImage'         => $event[''],
 			];
-
+			
 			if ( ! empty( $event['Image_ID'] ) ) {
-				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?ext=.jpeg';
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?mpevent-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
-
+			
 			if ( ! empty( $event['Congregation_ID'] ) ) {
 				if ( $location = $this->get_location_term( $event['Congregation_ID'] ) ) {
 					$args['tax_input']['cp_location'] = $location;
 				}
 			}
-
+			
 			if ( ! empty( $event['Event_Type'] ) ) {
 				$args['event_category'][] = $event['Event_Type'];
 			}
@@ -102,7 +101,7 @@ class MinistryPlatform extends ChMS {
 //					'Phone'     => $event[''],
 				];
 			}
-
+			
 			if ( ! empty( $event['Location_Name'] ) ) {
 				$args['Venue'] = [
 					'Venue'    => $event['Location_Name'],
@@ -115,7 +114,7 @@ class MinistryPlatform extends ChMS {
 //					'Phone'    => $event[''],
 				];
 			}
-
+			
 			$formatted[] = $args;
 		}
 
@@ -135,13 +134,13 @@ class MinistryPlatform extends ChMS {
 		$groups = $mp->table( 'Groups' )
 		             ->select( "Group_ID, Group_Name, Group_Type_ID_Table.[Group_Type], Groups.Congregation_ID,
 		             Primary_Contact_Table.[First_Name], Primary_Contact_Table.[Last_Name], Groups.Description,
-		             Groups.Start_Date, Groups.End_Date, Life_Stage_ID_Table.[Life_Stage], Group_Focus_ID_Table.[Group_Focus],
+		             Groups.Start_Date, Groups.End_Date, Life_Stage_ID_Table.[Life_Stage], Group_Focus_ID_Table.[Group_Focus], 
 		             Offsite_Meeting_Address_Table.[Postal_Code],Offsite_Meeting_Address_Table.[Address_Line_1],Offsite_Meeting_Address_Table.[City],
 		             Offsite_Meeting_Address_Table.[State/Region],
 		             Meeting_Time, Meeting_Day_ID_Table.[Meeting_Day], Meeting_Frequency_ID_Table.[Meeting_Frequency], dp_fileUniqueId as Image_ID" )
 		             ->filter( $filter )
 		             ->get();
-
+		
 		$formatted = [];
 
 		foreach ( $groups as $group ) {
@@ -165,34 +164,34 @@ class MinistryPlatform extends ChMS {
 				'thumbnail_url'    => '',
 				'break' => 11,
 			];
-
+			
 			if ( ! empty( $group['Image_ID'] ) ) {
-				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $group['Image_ID'] . '?ext=.jpeg';
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $group['Image_ID'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
-
+			
 			if ( !empty( $group['Meeting_Frequency'] ) ) {
 				$args['meta_input']['frequency'] = $group['Meeting_Frequency'];
 			}
-
+			
 			if ( !empty( $group['City'] ) ) {
 				$args['meta_input']['location'] = sprintf( "%s, %s %s", $group['City'], $group['State/Region'], $group['Postal_Code'] );
 			}
-
+			
 			if ( !empty( $group['Meeting_Time'] ) ) {
 				$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $group['Meeting_Time'] ) );
-
+				
 				if ( ! empty( $group['Meeting_Day'] ) ) {
 					$args['meta_input']['time_desc'] = $group['Meeting_Day'] . 's at ' . $args['meta_input']['time_desc'];
 					$args['meta_input']['meeting_day'] = $group['Meeting_Day'];
 				}
 			}
-
+			
 			if ( ! empty( $group['Congregation_ID'] ) ) {
 				if ( $location = $this->get_location_term( $group['Congregation_ID'] ) ) {
 					$args['tax_input']['cp_location'] = $location;
 				}
 			}
-
+			
 			if ( ! empty( $group['Group_Focus'] ) ) {
 				$args['group_category'][] = $group['Group_Focus'];
 			}
@@ -344,7 +343,7 @@ class MinistryPlatform extends ChMS {
 
 
 	function get_option_value( $key, $options = false ) {
-
+		
 		if ( ! $options ) {
 			$options = get_option( 'ministry_platform_plugin_options' );
 		}
@@ -437,22 +436,17 @@ class MinistryPlatform extends ChMS {
 	/**
 	 * Get oAuth and API connection parameters from the database
 	 *
-	 * @param string $option_slug			Ignored
-	 * @return bool
 	 */
-	function load_connection_parameters( $option_slug = 'ministry_platform_plugin_options' ) {
-		return parent::load_connection_parameters( 'ministry_platform_plugin_options' );
-	}
+	function mpLoadConnectionParameters() {
+		// If no options available then just return - it hasn't been setup yet
+		if ( ! $options = get_option( 'ministry_platform_plugin_options', '' ) ) {
+			return;
+		}
 
-	/**
-	 * Get parameters for this connection
-	 *
-	 * @param string $option_slug
-	 * @return array
-	 * @author costmo
-	 */
-	function get_connection_parameters( $option_slug = 'ministry_platform_plugin_options' ) {
-		return parent::get_connection_parameters( $option_slug );
+		foreach ( $options as $option => $value ) {
+			$envString = $option . '=' . $value;
+			putenv( $envString );
+		}
 	}
-
+	
 }
