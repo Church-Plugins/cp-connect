@@ -34,7 +34,21 @@ abstract class ChMS {
 	}
 
 	protected function __construct() {
-		add_action( 'init', [ $this, 'integrations' ] );
+		add_action( 'init', [ $this, 'integrations' ], 500 );
+		if ( isset( $_REQUEST['cp-connect-pull'] ) || get_option( 'cp_connect_pulling' ) ) {
+			delete_option( 'cp_connect_pulling' );
+			add_action('admin_notices', [ $this, 'general_admin_notice' ] );
+		}
+		
+		if ( isset( $_POST['cp-connect-pull'] ) ) {
+			update_option( 'cp_connect_pulling', true );
+		}
+	}
+
+	public function general_admin_notice() {
+		echo '<div class="notice notice-success is-dismissible">
+             <p>Processing pull request.</p>
+         </div>';
 	}
 
 	/**

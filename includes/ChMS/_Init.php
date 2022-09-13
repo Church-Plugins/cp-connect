@@ -39,7 +39,6 @@ class _Init {
 	 *
 	 */
 	protected function __construct() {
-		$this->includes();
 		$this->actions();
 	}
 
@@ -48,13 +47,22 @@ class _Init {
 	 *
 	 * @return void
 	 */
-	protected function includes() {
-		MinistryPlatform::get_instance();
-		$pco = PCO::get_instance();
+	public function includes() {
+		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+		
+		switch( $active_chms ) {
+			case 'mp':
+				MinistryPlatform::get_instance();
+				break;
+			case 'pco' :
+				$pco = PCO::get_instance();
+				break;
+		}
 	}
 
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ] );
+		add_action( 'init', [ $this, 'includes' ] );
 	}
 
 	/** Actions ***************************************************/

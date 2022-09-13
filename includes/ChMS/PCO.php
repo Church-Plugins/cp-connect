@@ -19,6 +19,10 @@ class PCO extends ChMS {
 	 */
 	public $api = null;
 
+	protected $events = [];
+	
+	protected $campuses = [];
+	
 	/**
 	 * Load up, if possible
 	 *
@@ -198,19 +202,23 @@ class PCO extends ChMS {
 	 */
 	public function pull_campus_details( $campus_name ) {
 
-		// The PCO API seemingly ignores all input to get a specific record
-		$raw =
-			$this->api()
-				->module('people')
-				->table('campuses')
-				->get();
-		if( !empty( $this->api()->errorMessage() ) ) {
-			error_log( var_export( $this->api()->errorMessage(), true ) );
-			return [];
-		}
+		if ( empty( $this->campuses ) ) {
+			// The PCO API seemingly ignores all input to get a specific record
+			$this->campuses =
+				$this->api()
+				     ->module( 'people' )
+				     ->table( 'campuses' )
+				     ->get();
+			if ( ! empty( $this->api()->errorMessage() ) ) {
+				error_log( var_export( $this->api()->errorMessage(), true ) );
 
-		if( !empty( $raw ) && is_array( $raw ) && !empty( $raw['data'] ) ) {
-			foreach( $raw['data'] as $index => $location_data ) {
+				return [];
+			}
+		}
+		
+
+		if( !empty( $this->campuses ) && is_array( $this->campuses ) && !empty( $this->campuses['data'] ) ) {
+			foreach( $this->campuses['data'] as $index => $location_data ) {
 				$normal_incoming = strtolower( $campus_name );
 				$normal_loop = strtolower( $location_data['attributes']['name'] ?? '' );
 
@@ -232,25 +240,36 @@ class PCO extends ChMS {
 	/**
 	 * Pull tags for an event instance
 	 *
-	 * @param int $event_instance_id
+	 * @param array $event
 	 * @return array
 	 * @author costmo
 	 */
-	public function pull_event_tags( $event_instance_id ) {
-
-		$raw =
-			$this->api()
-				->module('calendar')
-				->table('event_instances')
-				->id( $event_instance_id )
-				->associations('tags')
-				->get();
-		if( !empty( $this->api()->errorMessage() ) ) {
-			error_log( var_export( $this->api()->errorMessage(), true ) );
+	public function pull_event_tags( $event ) {
+		if ( empty( $event['relationships'] ) || empty( $event['relationships']['tags'] ) ) {
 			return [];
 		}
+		
+		if ( empty( $this->events['included'] ) ) {
+			return [];
+		}
+		
+		$tags = [];
+		foreach( $this->events['included'] as $include ) {
+			if ( $include['type'] != 'Tag' ) {
+				continue;
+			}
+			
+			$tags[ $include['id'] ] = $include;
+		}
+		
+		$event_tags = [];
+		foreach( $event['relationships']['tags']['data'] as $tag ) {
+			if ( ! empty( $tags[ $tag['id'] ] ) ) {
+				$event_tags[] = $tags[ $tag['id'] ];
+			}
+		}
 
-		return $raw['data'] ?? $raw;
+		return $event_tags;
 	}
 
 	/**
@@ -262,6 +281,16 @@ class PCO extends ChMS {
 	 */
 	public function pull_event( $event_id ) {
 
+		if ( ! empty( $this->events['data'] ) ) {
+			foreach( $this->events['data'] as $event ) {
+				if ( $event['id'] == $event_id ) {
+					return $event;
+				}
+			}
+			
+			return false;
+		} 
+		
 		$raw =
 			$this->api()
 				->module('calendar')
@@ -269,6 +298,7 @@ class PCO extends ChMS {
 				->id( $event_id )
 				->includes('owner')
 				->get();
+		
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
 			return [];
@@ -309,6 +339,14 @@ class PCO extends ChMS {
 				->filter('future,approved')
 				->order('starts_at')
 				->get();
+		
+		$this->events =
+			$this->api()
+				->module( 'calendar' )
+				->table('events')
+				->includes('tags' )
+				->where('visible_in_church_center', '=', 'true' )
+				->get();
 
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
@@ -325,7 +363,7 @@ class PCO extends ChMS {
 		}
 
 		if( $show_progress ) {
-			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $items ) . " events", count( $items ) );
+			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $this->events['data'] ) . " events", count( $this->events['data'] ) );
 		}
 
 		$counter = 0;
@@ -343,7 +381,9 @@ class PCO extends ChMS {
 			}
 
 			// Pull top-level event details
-			$event = $this->pull_event( $event_id );
+			if ( ! $event = $this->pull_event( $event_id ) ) {
+				continue;
+			}
 
 			$start_date = new \DateTime( $event_instance['attributes']['starts_at'] );
 			$end_date   = new \DateTime( $event_instance['attributes']['ends_at'] );
@@ -353,14 +393,17 @@ class PCO extends ChMS {
 			
 			// Begin stuffing the output
 			$args = [
-				'chms_id'               => $event_id,
-				'post_status'           => 'publish',
-				'post_title'            => $event['attributes']['name'] ?? '',
-				'post_content'          => $event['attributes']['description'] ?? '',
-				'post_excerpt'          => $event['attributes']['summary'] ?? '',
-				'tax_input'             => [],
-				'event_category'        => [],
-				'thumbnail_url'         => '',
+				'chms_id'        => $event_id,
+				'post_status'    => 'publish',
+				'post_title'     => $event['attributes']['name'] ?? '',
+				'post_content'   => $event['attributes']['description'] ?? '',
+				'post_excerpt'   => $event['attributes']['summary'] ?? '',
+				'tax_input'      => [],
+				'event_category' => [],
+				'thumbnail_url'  => '',
+				'meta_input'     => [
+					'registration_url' => $event['attributes']['registration_url'] ?? '',
+				],			
 				'EventStartDate'        => $start_date->format( 'Y-m-d' ),
 				'EventEndDate'          => $end_date->format( 'Y-m-d' ),
 //				'EventAllDay'           => $event[''],
@@ -389,7 +432,7 @@ class PCO extends ChMS {
 //			}
 
 			// Get the event's tags and pair them with appropriate taxonomies
-			$tags = $this->pull_event_tags( $event_instance['id'] );
+			$tags = $this->pull_event_tags( $event );
 
 			$tag_output = [];
 			if ( ! empty( $tags ) && is_array( $tags ) ) {
@@ -484,21 +527,18 @@ class PCO extends ChMS {
 	 * @return array
 	 * @author costmo
 	 */
-	public function pull_group_details( $group_id ) {
+	public function pull_group_details( $group, $included ) {
+		$details = [];
 
-		$raw =
-		$this->api()
-			->module('groups')
-			->table('groups')
-			->id( $group_id )
-			->includes('location,group_type')
-			->get();
-
-		if( !empty( $this->api()->errorMessage() ) ) {
-			error_log( var_export( $this->api()->errorMessage(), true ) );
+		foreach ( $group['relationships'] as $relationship ) {
+			foreach ( $included as $include ) {
+				if ( $include['id'] == $relationship['data']['id'] ) {
+					$details[] = $include;
+				}
+			}
 		}
-
-		return $raw['included'] ?? [];
+		
+		return $details;
 	}
 
 	/**
@@ -537,9 +577,7 @@ class PCO extends ChMS {
 
 		$counter = 0;
 		foreach( $items as $group ) {
-
-			$item_details = $this->pull_group_details( $group['id'] ?? 0 );
-
+			
 			$start_date = strtotime( $group['attributes']['created_at'] ?? null );
 			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
 
@@ -565,6 +603,8 @@ class PCO extends ChMS {
 				$args['meta_input']['frequency'] = $group['attributes']['schedule'];
 			}
 
+			$item_details = $this->pull_group_details( $group, $raw['included'] );
+			
 			foreach( $item_details as $index => $item_data ) {
 
 				$type = $item_data['type'] ?? '';
@@ -639,6 +679,7 @@ class PCO extends ChMS {
 			<h2>Planning Center Online Plugin Options</h2>
 			<p class="description">Here you can set the parameters to authenticate to and use the Planning Center Online
 				API</p>
+			
 			<!-- Make a call to the WordPress function for rendering errors when settings are saved. -->
 			<?php settings_errors(); ?>
 
@@ -646,7 +687,10 @@ class PCO extends ChMS {
 			<form method="post" action="options.php">
 				<?php settings_fields( 'pco_plugin_options' ); ?>
 				<?php do_settings_sections( 'pco_plugin_options' ); ?>
-				<?php submit_button(); ?>
+				<p class="submit">
+					<?php submit_button( null, 'primary', 'submit', false ); ?>
+					<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
+				</p>
 			</form>
 		</div> <!-- /.wrap -->
 
@@ -854,4 +898,40 @@ class PCO extends ChMS {
 		return $in_tax;
 	}
 
+}
+
+class PCO_Background_Task extends \WP_Background_Process {
+	
+	/**
+	 * @var string
+	 */
+	protected $action = 'pco_event_task';
+
+	/**
+	 * Task
+	 *
+	 * Override this method to perform any actions required on each
+	 * queue item. Return the modified item for further processing
+	 * in the next pass through. Or, return false to remove the
+	 * item from the queue.
+	 *
+	 * @param mixed $item Queue item to iterate over
+	 *
+	 * @return mixed
+	 */
+	protected function task( $item ) {
+		// Actions to perform
+
+		return false;
+	}
+
+	/**
+	 * Complete
+	 *
+	 * Override if applicable, but ensure that the below actions are
+	 * performed, or, call parent::complete().
+	 */
+	protected function complete() {
+		parent::complete();
+	}
 }

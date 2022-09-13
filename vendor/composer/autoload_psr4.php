@@ -19,6 +19,7 @@ return array(
     'Psr\\SimpleCache\\' => array($vendorDir . '/psr/simple-cache/src'),
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src'),
     'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
+    'PlanningCenterAPI\\' => array($baseDir . '/includes/ChMS/planning-center-api/src'),
     'MinistryPlatform\\' => array($baseDir . '/includes/Integrations/MinistryPlatform'),
     'MinistryPlatformAPI\\' => array($vendorDir . '/smadeira/ministry-platform-api/src'),
     'Illuminate\\Support\\' => array($vendorDir . '/illuminate/support'),

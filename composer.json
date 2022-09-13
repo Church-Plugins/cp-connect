@@ -15,7 +15,8 @@
     "php": ">=7.0.0",
     "composer/installers": "*",
     "wpackio/enqueue": "^3.4",
-    "smadeira/ministry-platform-api": "^2.0.0"
+    "smadeira/ministry-platform-api": "^2.0.0",
+    "deliciousbrains/wp-background-processing": "^1.0"
   },
   "autoload": {
     "psr-4": {
