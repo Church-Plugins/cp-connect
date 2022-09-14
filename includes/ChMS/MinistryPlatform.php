@@ -247,7 +247,10 @@ class MinistryPlatform extends ChMS {
 			<form method="post" action="options.php">
 				<?php settings_fields( 'ministry_platform_plugin_options' ); ?>
 				<?php do_settings_sections( 'ministry_platform_plugin_options' ); ?>
-				<?php submit_button(); ?>
+				<p class="submit">
+					<?php submit_button( null, 'primary', 'submit', false ); ?>
+					<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
+				</p>
 			</form>
 		</div> <!-- /.wrap -->
 

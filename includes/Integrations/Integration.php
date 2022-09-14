@@ -73,7 +73,7 @@ abstract class Integration {
 			if ( $this->create_store_key( $item ) !== $store ) {
 
 				try {
-					$id = $this->update_item( $item );
+					$id = $this->update_item( apply_filters( "cp_connect_{$this->type}_item", $item, $this ) );
 					update_post_meta( $id, '_chms_id', $item['chms_id'] );
 				} catch( Exception $e ) {
 					error_log( $e );
