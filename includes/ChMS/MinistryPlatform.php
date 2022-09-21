@@ -9,14 +9,14 @@ class MinistryPlatform extends ChMS {
 	public function integrations() {
 		$this->mpLoadConnectionParameters();
 		
-		add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-		add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+		add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
+		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
 	}
 
-	public function pull_events( $events = [] ) {
+	public function pull_events( $integration ) {
 		$mp      = new MP();
 
 		// Authenticate to get access token required for API calls
@@ -118,11 +118,10 @@ class MinistryPlatform extends ChMS {
 			$formatted[] = $args;
 		}
 
-		return $formatted;
-
+		$integration->process( $formatted );
 	}
 
-	public function pull_groups( $groups = [] ) {
+	public function pull_groups( $integration ) {
 		$mp = new MP();
 
 		// Authenticate to get access token required for API calls
@@ -207,7 +206,7 @@ class MinistryPlatform extends ChMS {
 			$formatted[] = $args;
 		}
 
-		return $formatted;
+		$integration->process( $formatted );
 	}
 
 

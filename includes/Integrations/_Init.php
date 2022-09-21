@@ -20,6 +20,11 @@ class _Init {
 	public static $_cron_hook = 'cp_connect_pull';
 
 	/**
+	 * @var array 
+	 */
+	protected static $_integrations = [];
+	
+	/**
 	 * Only make one instance of _Init
 	 *
 	 * @return _Init
@@ -46,8 +51,27 @@ class _Init {
 	 * @return void
 	 */
 	protected function includes() {
-		CP_Groups::get_instance();
-		TEC::get_instance();
+		$integrations = [ 'tec' => '\CP_Connect\Integrations\TEC', 'cp_groups' => '\CP_Connect\Integrations\CP_Groups' ];
+		
+		foreach( $integrations as $key => $integration ) {
+			if ( ! class_exists( $integration ) ) {
+				continue;
+			}
+			
+			self::$_integrations[ $key ] = new $integration;
+		}
+	}
+
+	/**
+	 * Return integrations
+	 * 
+	 * @return array
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function get_integrations() {
+		return self::$_integrations;
 	}
 
 	/**
@@ -59,10 +83,24 @@ class _Init {
 	 */
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ], 999 );
+		add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
 	}
 
 	/** Actions ***************************************************/
 
+	/**
+	 * trigger the contant pull
+	 * 
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function pull_content() {
+		foreach( self::$_integrations as $integration ) {
+			do_action( 'cp_connect_pull_' . $integration->type, $integration );
+		}
+	}
+	
 	/**
 	 * Schedule the cron to pull data from the ChMS
 	 * 
@@ -72,6 +110,7 @@ class _Init {
 	 */
 	public function schedule_cron() {
 		if ( is_admin() && isset( $_REQUEST['cp-connect-pull'] ) ) {
+			add_filter( 'cp_connect_process_hard_refresh', '__return_true' );
 			do_action( self::$_cron_hook );
 		}
 

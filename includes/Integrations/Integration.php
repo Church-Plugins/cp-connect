@@ -3,12 +3,7 @@ namespace CP_Connect\Integrations;
 
 use CP_Connect\Exception;
 
-abstract class Integration {
-
-	/**
-	 * @var self
-	 */
-	protected static $_instance;
+abstract class Integration extends \WP_Background_Process {
 
 	/**
 	 * @var | Unique ID for this integration
@@ -26,22 +21,12 @@ abstract class Integration {
 	public $label;
 
 	/**
-	 * Only make one instance of PostType
-	 *
-	 * @return self
+	 * Set the Action
 	 */
-	public static function get_instance() {
-		$class = get_called_class();
+	public function __construct() {
+		$this->action = 'pull_' . $this->type;
 
-		if ( ! self::$_instance instanceof $class ) {
-			self::$_instance = new $class();
-		}
-
-		return self::$_instance;
-	}
-
-	protected function __construct() {
-		add_action( _Init::$_cron_hook, [ $this, 'pull_content' ] );
+		parent::__construct();
 	}
 
 	/**
@@ -49,36 +34,23 @@ abstract class Integration {
 	 *
 	 * @since  1.0.0
 	 *
-	 * @author Tanner Moushey
+	 * @author Tanner Moushey 
 	 */
-	public function pull_content() {
-		$items = apply_filters( 'cp_connect_pull_' . $this->type, false );
-
-		// error_log( "CONTENT PULL RECEIVED: " . $this->type );
-		// error_log( var_export( $items, true ) );
-
-		// break early if something went wrong or nothing hooked in
-		if ( empty( $items ) || !is_array( $items ) ) {
-			return;
-		}
+	public function process( $items ) {
 
 		$item_store = $this->get_store();
 
 		foreach( $items as $item ) {
 			$store = $item_store[ $item['chms_id'] ] ?? false;
 
-			// $item['foo'] = md5( time() );
-
+			// add a unique key to process a hard pull
+			if ( apply_filters( 'cp_connect_process_hard_refresh', false, $items, $this ) ) {
+				$item[ md5( time() ) ] = time();
+			}
+			
 			// check if any of the provided values have changed
 			if ( $this->create_store_key( $item ) !== $store ) {
-
-				try {
-					$id = $this->update_item( apply_filters( "cp_connect_{$this->type}_item", $item, $this ) );
-					update_post_meta( $id, '_chms_id', $item['chms_id'] );
-				} catch( Exception $e ) {
-					error_log( $e );
-				}
-
+				$this->push_to_queue( apply_filters( "cp_connect_{$this->type}_item", $item, $this ) );
 			}
 
 			unset( $item_store[ $item['chms_id'] ] );
@@ -89,6 +61,44 @@ abstract class Integration {
 		}
 
 		$this->update_store( $items );
+		
+		$this->save()->dispatch();
+	}
+
+	/**
+	 * The task for handling individual item updates
+	 * 
+	 * @param $item
+	 *
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function task( $item ) {
+		
+		try {
+			$id = $this->update_item( $item );
+		} catch ( Exception $e ) {
+			error_log( 'Could not import item: ' . json_encode( $item ) );
+			error_log( $e );
+			return false;
+		}
+		
+		$this->maybe_sideload_thumb( $item, $id );
+		
+		// Save ChMS ID
+		if ( ! empty( $item['chms_id'] ) ) {
+			update_post_meta( $id, '_chms_id', $item['chms_id'] );
+		}
+		
+		do_action( 'cp_update_item_after', $item, $id, $this );
+		do_action( 'cp_' . $this->id . '_update_item_after', $item, $id );
+		return false;
+	}
+	
+	protected function complete() {
+		parent::complete();
 	}
 
 	/**
@@ -105,6 +115,32 @@ abstract class Integration {
 	abstract function update_item( $item );
 
 	/**
+	 * Import item thumbnail
+	 * 
+	 * @param $item
+	 * @param $id
+	 *
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function maybe_sideload_thumb( $item, $id ) {
+		require_once( ABSPATH . 'wp-admin/includes/media.php' );
+		require_once( ABSPATH . 'wp-admin/includes/file.php' );
+		require_once( ABSPATH . 'wp-admin/includes/image.php' );
+		
+		// import the image and set as the thumbnail
+		if ( ! empty( $item['thumbnail_url'] ) && get_post_meta( $id, '_thumbnail_url', true ) !== $item['thumbnail_url'] ) {
+			$thumb_id = media_sideload_image( $item['thumbnail_url'], $id, $item['post_title'] . ' Thumbnail', 'id' );
+
+			if ( ! is_wp_error( $thumb_id ) ) {
+				set_post_thumbnail( $id, $thumb_id );
+				update_post_meta( $id, '_thumbnail_url', $item['thumbnail_url'] );
+			}
+		}
+	}
+
+	/**
 	 * Remove all posts associated with this chms_id, there should only be one
 	 *
 	 * @param $chms_id
@@ -115,6 +151,11 @@ abstract class Integration {
 	 */
 	public function remove_item( $chms_id ) {
 		$id = $this->get_chms_item_id( $chms_id );
+		
+		if ( $thumb = get_post_thumbnail_id( $id ) ) {
+			wp_delete_attachment( $thumb, true );
+		}
+		
 		wp_delete_post( $id, true );
 	}
 

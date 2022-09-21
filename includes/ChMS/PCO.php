@@ -34,8 +34,8 @@ class PCO extends ChMS {
 		// If this integration is not configured, do not add our pull filters
 		if( true === $this->load_connection_parameters() ) {
 			$this->maybe_setup_taxonomies();
-			add_filter( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-			add_filter( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+			add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
+			add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		}
 
 		$this->setup_taxonomies( false );
@@ -364,7 +364,7 @@ class PCO extends ChMS {
 	 * @return array
 	 * @author costmo
 	 */
-	public function pull_events( $events = [], $show_progress = false ) {
+	public function pull_events( $integration, $show_progress = false ) {
 
 		error_log( "PULL EVENTS STARTED " . date( 'Y-m-d H:i:s' ) );
 
@@ -556,7 +556,7 @@ class PCO extends ChMS {
 		
 		error_log( "PULL EVENTS FINISHED " . date( 'Y-m-d H:i:s') );
 
-		return $formatted;
+		$integration->process( $formatted );
 	}
 
 	/**
@@ -587,7 +587,7 @@ class PCO extends ChMS {
 	 * @return array
 	 * @author costmo
 	 */
-	public function pull_groups( $groups = [] ) {
+	public function pull_groups( $integration ) {
 
 		error_log( "PULL GROUPS STARTED" );
 
@@ -691,7 +691,7 @@ class PCO extends ChMS {
 			// }
 		}
 
-		return $formatted;
+		$integration->process( $formatted );
 	}
 
 	/**

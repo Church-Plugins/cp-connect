@@ -54,4 +54,4 @@ class PCO_CLI {
 		\WP_CLI::log( var_export( $items, true ) );
 		\WP_CLI::success( "DONE" );
 	}
-}
+} 
