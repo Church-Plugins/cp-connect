@@ -20,6 +20,16 @@ class TEC extends Integration {
 
 		unset( $item['chms_id'] );
 
+		// Organizer does not ignore duplicates by default, so we are handling that
+		if ( isset( $item['Organizer'] ) ) {
+			$item['Organizer']['OrganizerID'] = \Tribe__Events__Organizer::instance()->create( $item['Organizer'], 'publish', true );
+			
+			if ( is_wp_error( $item['Organizer']['OrganizerID'] ) ) {
+				unset( $item['Organizer'] );
+				error_log( $item['Organizer']['OrganizerID']->get_error_message() );
+			}
+		}
+		
 		$id = tribe_create_event( $item );
 
 		if ( ! $id ) {

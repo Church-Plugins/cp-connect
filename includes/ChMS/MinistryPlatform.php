@@ -48,7 +48,7 @@ class MinistryPlatform extends ChMS {
 				'post_status'      => 'publish',
 				'post_title'       => $event['Event_Title'],
 				'post_content'     => $event['Description'] . '<br />' . $event['Meeting_Instructions'],
-				'post_excerpt'     => $event['Description'],
+//				'post_excerpt'     => $event['Description'],
 				'tax_input'        => [],
 				'event_category'   => [],
 				'thumbnail_url'    => '',
