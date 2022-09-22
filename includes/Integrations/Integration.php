@@ -38,6 +38,8 @@ abstract class Integration extends \WP_Background_Process {
 	 */
 	public function process( $items ) {
 
+		$items = apply_filters( 'cp_connect_process_items', $items, $this );
+		
 		$item_store = $this->get_store();
 
 		foreach( $items as $item ) {
