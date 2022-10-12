@@ -373,7 +373,7 @@ class PCO extends ChMS {
 			$this->api()
 				->module('calendar')
 				->table('event_instances')
-				->includes('event')
+				->includes('event,event_times')
 				->filter('future')
 				->order('starts_at')
 				->get();
@@ -422,10 +422,28 @@ class PCO extends ChMS {
 			if ( ! $event = $this->pull_event( $event_id ) ) {
 				continue;
 			}
+			
+			$time_ids = wp_list_pluck( $event_instance['relationships']['event_times']['data'], 'id' );
+			$start_date = $end_date = false;
+			
+			foreach( $raw['included'] as $include ) {
+				if ( ! in_array( $include['id'], $time_ids ) ) {
+					continue;
+				}
+				
+				if ( empty( $include['attributes']['visible_on_kiosks'] ) ) {
+					continue;
+				}
 
-			$start_date = new \DateTime( $event_instance['attributes']['starts_at'] );
-			$end_date   = new \DateTime( $event_instance['attributes']['ends_at'] );
+				$start_date = new \DateTime( $include['attributes']['starts_at'] );
+				$end_date   = new \DateTime( $include['attributes']['ends_at'] );
+				break;
+			}
 
+			if ( ! $start_date || ! $end_date ) {
+				continue;
+			}
+			
 			$start_date->setTimezone( wp_timezone() );
 			$end_date->setTimezone( wp_timezone() );
 			
