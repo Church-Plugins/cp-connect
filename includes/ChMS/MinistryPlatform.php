@@ -81,7 +81,7 @@ class MinistryPlatform extends ChMS {
 			
 			if ( ! empty( $event['Congregation_ID'] ) ) {
 				if ( $location = $this->get_location_term( $event['Congregation_ID'] ) ) {
-					$args['tax_input']['cp_location'] = $location;
+					$args['cp_location'] = $location;
 				}
 			}
 			
@@ -187,7 +187,7 @@ class MinistryPlatform extends ChMS {
 			
 			if ( ! empty( $group['Congregation_ID'] ) ) {
 				if ( $location = $this->get_location_term( $group['Congregation_ID'] ) ) {
-					$args['tax_input']['cp_location'] = $location;
+					$args['cp_location'] = $location;
 				}
 			}
 			

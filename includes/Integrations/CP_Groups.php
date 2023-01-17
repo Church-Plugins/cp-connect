@@ -33,7 +33,12 @@ class CP_Groups extends Integration {
 			$taxonomy = 'cp_' . $tax;
 			$categories = [];
 
-			foreach( $item[$tax] as $category ) {
+			if ( empty( $item[ $tax ] ) ) {
+				wp_set_post_terms( $id, [], $taxonomy );
+				continue;
+			}
+			
+			foreach( $item[ $tax ] as $category ) {
 				
 				if ( ! $term = term_exists( $category, $taxonomy ) ) {
 					$term = wp_insert_term( $category, $taxonomy );

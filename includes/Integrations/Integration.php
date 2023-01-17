@@ -88,6 +88,7 @@ abstract class Integration extends \WP_Background_Process {
 		}
 		
 		$this->maybe_sideload_thumb( $item, $id );
+		$this->maybe_update_location( $item, $id );
 		
 		// Save ChMS ID
 		if ( ! empty( $item['chms_id'] ) ) {
@@ -140,6 +141,23 @@ abstract class Integration extends \WP_Background_Process {
 				update_post_meta( $id, '_thumbnail_url', $item['thumbnail_url'] );
 			}
 		}
+	}
+
+	/**
+	 * @param $item
+	 * @param $id
+	 *
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function maybe_update_location( $item, $id ) {
+		if ( ! taxonomy_exists( 'cp_location' ) ) {
+			return;
+		}
+		
+		$location = empty( $item['cp_location'] ) ? false : $item['cp_location'];
+		wp_set_post_terms( $id, $location, 'cp_location' );
 	}
 
 	/**

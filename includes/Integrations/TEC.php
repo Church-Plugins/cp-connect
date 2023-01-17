@@ -13,7 +13,7 @@ class TEC extends Integration {
 	public $label = 'Events';
 
 	public function update_item( $item ) {
-
+		
 		if ( $id = $this->get_chms_item_id( $item['chms_id'] ) ) {
 			$item['ID'] = $id;
 		}
