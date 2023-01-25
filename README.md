@@ -19,5 +19,9 @@ npm run build
 
 ### Change Log
 
+#### 1.0.1
+* Better handling for location setting
+* Update post after initial save to handle duplicate slugs
+
 #### 1.0.0
 * Initial release

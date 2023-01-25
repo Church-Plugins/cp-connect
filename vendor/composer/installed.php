@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => '8fd2e685da1f381c9e5a84ed49386271aba0bc53',
+    'reference' => 'bb7b4f1721cbd24dcc3cb6c7ebfaef3a38c0e7d9',
     'name' => 'churchplugins/cp-connect',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => '8fd2e685da1f381c9e5a84ed49386271aba0bc53',
+      'reference' => 'bb7b4f1721cbd24dcc3cb6c7ebfaef3a38c0e7d9',
     ),
     'composer/installers' => 
     array (

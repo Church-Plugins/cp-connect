@@ -89,7 +89,10 @@ abstract class Integration extends \WP_Background_Process {
 		
 		$this->maybe_sideload_thumb( $item, $id );
 		$this->maybe_update_location( $item, $id );
-		
+
+		// re-save the post to trigger slug calculation post location update
+		wp_update_post( get_post( $id ) );
+
 		// Save ChMS ID
 		if ( ! empty( $item['chms_id'] ) ) {
 			update_post_meta( $id, '_chms_id', $item['chms_id'] );
