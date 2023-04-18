@@ -44,10 +44,10 @@ class ChurchCommunityBuilder extends ChMS {
 		$groups = $this->api()->get( $args ); //todo test this and return early if not what we want
 
 		$groups = json_decode( json_encode( $groups->response->groups ), false );
-		
+
 		$formatted = [];
 
-		foreach ( $groups->group as $group ) { 
+		foreach ( $groups->group as $group ) {
 
 			// Skip inactive and general groups
 			// @TODO ... this should be a filter so it isn't specific to ChristPres
@@ -74,7 +74,7 @@ class ChurchCommunityBuilder extends ChMS {
 				],
 				'thumbnail_url'    => '',
 			];
-			
+
 			if ( 'string' === gettype( $group->description ) && ! empty( $group->description ) ) {
 				$args['post_content'] = $group->description;
 			}
@@ -93,10 +93,10 @@ class ChurchCommunityBuilder extends ChMS {
 			} else {
 				$args['meta_input']['location'] = sprintf( "%s %s", $address_state, $address_zip );
 			}
-			
+
 			if ( !empty( $group->meeting_time ) && 'string' == gettype( $group->meeting_time ) ) {
 				$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $group->meeting_time ) );
-				
+
 				if ( ! empty( $group->meeting_day ) && 'string' == gettype( $group->meeting_day ) ) {
 					$args['meta_input']['time_desc'] = $group->meeting_day . 's at ' . $args['meta_input']['time_desc'];
 					$args['meta_input']['meeting_day'] = $group->meeting_day;
@@ -104,7 +104,7 @@ class ChurchCommunityBuilder extends ChMS {
 			}
 
 			$args['meta_input']['kid_friendly'] = ( ( 'true' == $group->childcare_provided ) && 'string' == gettype( $group->childcare_provided ) ) ? true : false;
-			
+
 			if ( ! empty( $group->campus ) ) {
 				// if ( $location = $this->get_location_term( $group->campus ) ) {
 					$args['cp_location'] = $group->campus;
@@ -114,7 +114,7 @@ class ChurchCommunityBuilder extends ChMS {
 			if ( ! empty( $group->group_type ) ) {
 				$args['group_type'][] = $group->group_type;
 			}
-			
+
 			$additional_fields = array();
 			if ( ! empty( (array) $group->user_defined_fields ) ) {
 				if ( 'array' == gettype( $group->user_defined_fields->user_defined_field ) ) {
@@ -205,6 +205,7 @@ class ChurchCommunityBuilder extends ChMS {
 				<?php do_settings_sections( 'ccb_plugin_options' ); ?>
 				<p class="submit">
 					<?php submit_button( null, 'primary', 'submit', false ); ?>
+					<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
 				</p>
 			</form>
 		</div> <!-- /.wrap -->
@@ -322,7 +323,7 @@ class ChurchCommunityBuilder extends ChMS {
 		);
 
 
-	} 
+	}
 
     public function ccb_section_callback() {
         echo '<p>' . __('These are the settings for the API connection to Church Community Builder.', 'ccbpress-core') . '</p>';
@@ -473,7 +474,7 @@ class ChurchCommunityBuilder extends ChMS {
 	}
 
 	function get_option_value( $key, $options = false ) {
-		
+
 		if ( ! $options ) {
 			$options = get_option( 'ccb_plugin_options' );
 		}
@@ -488,5 +489,5 @@ class ChurchCommunityBuilder extends ChMS {
 		return array_key_exists( $key, $options ) ? $options[ $key ] : '';
 
 	}
-	
+
 }

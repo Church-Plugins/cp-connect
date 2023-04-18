@@ -343,7 +343,7 @@ class CCBPress_Connection {
 
 	/**
 	 * Check the rate limit
-	 * 
+	 *
 	 * @return boolean
 	 */
 	public function rate_limit_ok( $srv ) {
@@ -361,7 +361,7 @@ class CCBPress_Connection {
 				return true;
 			}
 		}
-		
+
 		if ( isset( $ccbpress_rate_limits[ $srv ]['reset'] ) ) {
 			$reset = intval($ccbpress_rate_limits[ $srv ]['reset']);
 			if ( time() >= $reset ) {
@@ -374,7 +374,7 @@ class CCBPress_Connection {
 
 	/**
 	 * Update rate limit option values
-	 * 
+	 *
 	 * @return void
 	 */
 	public function update_rate_limit( $response, $srv ) {
@@ -675,7 +675,7 @@ class CCBPress_Connection {
 
 	/**
 	 * Delete a single image.
-	 * 
+	 *
 	 * @since 1.3.11
 	 *
 	 * @param string $image_id The ID of the image.
@@ -855,7 +855,7 @@ class CCBPress_Connection {
 					$is_valid = false;
 					break;
 				}
-				
+
 				// Is there and end date and is it after that end date?
 				if ( false !== $form_end && $current_date > $form_end ) {
 					$is_valid = false;

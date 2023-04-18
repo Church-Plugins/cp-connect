@@ -14,16 +14,16 @@ class _Init {
 
 	/**
 	 * The string to use for the cron pull
-	 * 
-	 * @var string 
+	 *
+	 * @var string
 	 */
 	public static $_cron_hook = 'cp_connect_pull';
 
 	/**
-	 * @var array 
+	 * @var array
 	 */
 	protected static $_integrations = [];
-	
+
 	/**
 	 * Only make one instance of _Init
 	 *
@@ -52,19 +52,19 @@ class _Init {
 	 */
 	protected function includes() {
 		$integrations = [ 'tec' => '\CP_Connect\Integrations\TEC', 'cp_groups' => '\CP_Connect\Integrations\CP_Groups' ];
-		
+
 		foreach( $integrations as $key => $integration ) {
 			if ( ! class_exists( $integration ) ) {
 				continue;
 			}
-			
+
 			self::$_integrations[ $key ] = new $integration;
 		}
 	}
 
 	/**
 	 * Return integrations
-	 * 
+	 *
 	 * @return array
 	 * @since  1.0.0
 	 *
@@ -75,15 +75,15 @@ class _Init {
 	}
 
 	/**
-	 * Handle actions 
-	 * 
+	 * Handle actions
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ], 999 );
-		// add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
+		add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
 
 		// add_action( 'init', [ $this, 'pull_content' ], 9999 );
 	}
@@ -92,20 +92,20 @@ class _Init {
 
 	/**
 	 * trigger the contant pull
-	 * 
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
-	public function pull_content() { 
+	public function pull_content() {
 		foreach( self::$_integrations as $integration ) {
 			do_action( 'cp_connect_pull_' . $integration->type, $integration );
 		}
 	}
-	
+
 	/**
 	 * Schedule the cron to pull data from the ChMS
-	 * 
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -124,7 +124,7 @@ class _Init {
 			'timestamp' => time(),
 			'recurrence' => 'hourly',
 		] );
-		
+
 		wp_schedule_event( $args[ 'timestamp' ], $args['recurrence'], self::$_cron_hook );
-	}	
+	}
 }
