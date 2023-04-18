@@ -3,6 +3,7 @@
 namespace CP_Connect\ChMS;
 
 require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/cli/PCO.php" );
+require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/ccb-api/ccb-api.php" );
 
 /**
  * Setup integration initialization
@@ -47,7 +48,7 @@ class _Init {
 	 * @return void
 	 */
 	public function includes() {
-		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+		$active_chms = apply_filters( 'cp_connect_active_chms', 'ccb' );
 		
 		switch( $active_chms ) {
 			case 'mp':
@@ -55,6 +56,9 @@ class _Init {
 				break;
 			case 'pco' :
 				$pco = PCO::get_instance();
+				break;
+			case 'ccb' :
+				$ccb = ChurchCommunityBuilder::get_instance();
 				break;
 		}
 	}

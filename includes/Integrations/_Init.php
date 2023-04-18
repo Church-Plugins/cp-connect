@@ -83,7 +83,9 @@ class _Init {
 	 */
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ], 999 );
-		add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
+		// add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
+
+		// add_action( 'init', [ $this, 'pull_content' ], 9999 );
 	}
 
 	/** Actions ***************************************************/
@@ -95,7 +97,7 @@ class _Init {
 	 *
 	 * @author Tanner Moushey
 	 */
-	public function pull_content() {
+	public function pull_content() { 
 		foreach( self::$_integrations as $integration ) {
 			do_action( 'cp_connect_pull_' . $integration->type, $integration );
 		}
