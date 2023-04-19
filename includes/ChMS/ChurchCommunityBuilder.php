@@ -70,7 +70,7 @@ class ChurchCommunityBuilder extends ChMS {
 				'group_life_stage' => [],
 				'meta_input'       => [
 					'leader'     => $group->main_leader->full_name,
-					'public_url' => '',
+					'public_url' => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
 				],
 				'thumbnail_url'    => '',
 			];

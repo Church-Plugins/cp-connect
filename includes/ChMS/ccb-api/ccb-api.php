@@ -102,12 +102,7 @@ class CCBPress_Connection {
 			$api_pass = $ccbpress_ccb['api_pass'];
 		}
 
-		$api_prefix = '';
-		if ( isset( $ccbpress_ccb['api_prefix'] ) ) {
-			$api_prefix = $ccbpress_ccb['api_prefix'];
-		}
-
-		$this->api_url				= $this->api_protocol . $api_prefix . $this->api_endpoint;
+		$this->api_url				= $this->get_base_url( 'api.php' );
 		$this->api_user				= $api_user;
 		$this->api_pass				= $api_pass;
 		$this->transient_prefix		= 'ccb_';
@@ -150,6 +145,32 @@ class CCBPress_Connection {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Get the base url for the CCB account
+	 *
+	 * @since  1.0.0
+	 *
+	 *
+	 * @return mixed|void
+	 * @author Tanner Moushey, 4/18/23
+	 */
+	public function get_base_url( $path = '' ) {
+		$ccbpress_ccb = get_option( 'ccb_plugin_options' );
+
+		$api_prefix = '';
+		if ( isset( $ccbpress_ccb['api_prefix'] ) ) {
+			$api_prefix = $ccbpress_ccb['api_prefix'];
+		}
+
+		$url = $this->api_protocol . $api_prefix . '.ccbchurch.com';
+
+		if ( $path ) {
+			$url .= '/' . $path;
+		}
+
+		return apply_filters( 'cp_connect_ccb_get_base_url',  $url, $path );
 	}
 
 	/**
