@@ -75,7 +75,7 @@ class ChurchCommunityBuilder extends ChMS {
 				'thumbnail_url'    => '',
 			];
 
-			if ( 'string' === gettype( $group->description ) && ! empty( $group->description ) ) {
+			if ( is_string( $group->description ) && ! empty( $group->description ) ) {
 				$args['post_content'] = $group->description;
 			}
 
@@ -163,7 +163,11 @@ class ChurchCommunityBuilder extends ChMS {
 
 
 	public function get_group_image( $value, $group ) {
-		return get_post_meta( $group->post->ID, '_cached_thumbnail_url', true );
+		if ( $url = get_post_meta( $group->post->ID, '_cached_thumbnail_url', true ) ) {
+			return $url;
+		}
+
+		return $value;
 	}
 
 
