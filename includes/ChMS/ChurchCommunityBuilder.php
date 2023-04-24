@@ -69,8 +69,9 @@ class ChurchCommunityBuilder extends ChMS {
 				'group_type'       => [],
 				'group_life_stage' => [],
 				'meta_input'       => [
-					'leader'     => $group->main_leader->full_name,
-					'public_url' => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
+					'leader'       => $group->main_leader->full_name,
+					'leader_email' => $group->main_leader->email,
+					'public_url'   => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
 				],
 				'thumbnail_url'    => '',
 			];
