@@ -41,15 +41,15 @@ class _Init {
 	}
 
 	/** Actions ***************************************************/
-	
+
 	/**
 	 * Admin init includes
 	 *
 	 * @return void
 	 */
 	public function includes() {
-		$active_chms = apply_filters( 'cp_connect_active_chms', 'ccb' );
-		
+		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+
 		switch( $active_chms ) {
 			case 'mp':
 				MinistryPlatform::get_instance();

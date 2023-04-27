@@ -20,9 +20,9 @@ class PCO extends ChMS {
 	public $api = null;
 
 	protected $events = [];
-	
+
 	protected $campuses = [];
-	
+
 	/**
 	 * Load up, if possible
 	 *
@@ -43,7 +43,7 @@ class PCO extends ChMS {
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
 		add_action( 'cp_tec_update_item_after', [ $this, 'event_taxonomies' ], 10, 2 );
 	}
-	
+
 	public function event_taxonomies( $item, $id ) {
 		$taxonomies = [ 'Ministry Group', 'Ministry Leader', 'Frequency', 'cp_ministry' ];
 		foreach( $taxonomies as $tax ) {
@@ -253,7 +253,7 @@ class PCO extends ChMS {
 				return [];
 			}
 		}
-		
+
 
 		if( !empty( $this->campuses ) && is_array( $this->campuses ) && !empty( $this->campuses['data'] ) ) {
 			foreach( $this->campuses['data'] as $index => $location_data ) {
@@ -286,20 +286,20 @@ class PCO extends ChMS {
 		if ( empty( $event['relationships'] ) || empty( $event['relationships']['tags'] ) ) {
 			return [];
 		}
-		
+
 		if ( empty( $this->events['included'] ) ) {
 			return [];
 		}
-		
+
 		$tags = [];
 		foreach( $this->events['included'] as $include ) {
 			if ( $include['type'] != 'Tag' ) {
 				continue;
 			}
-			
+
 			$tags[ $include['id'] ] = $include;
 		}
-		
+
 		$event_tags = [];
 		foreach( $event['relationships']['tags']['data'] as $tag ) {
 			if ( ! empty( $tags[ $tag['id'] ] ) ) {
@@ -325,10 +325,10 @@ class PCO extends ChMS {
 					return $event;
 				}
 			}
-			
+
 			return false;
-		} 
-		
+		}
+
 		$raw =
 			$this->api()
 				->module('calendar')
@@ -336,7 +336,7 @@ class PCO extends ChMS {
 				->id( $event_id )
 				->includes('owner')
 				->get();
-		
+
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
 			return [];
@@ -377,7 +377,7 @@ class PCO extends ChMS {
 				->filter('future')
 				->order('starts_at')
 				->get();
-		
+
 		$this->events =
 			$this->api()
 				->module( 'calendar' )
@@ -422,15 +422,15 @@ class PCO extends ChMS {
 			if ( ! $event = $this->pull_event( $event_id ) ) {
 				continue;
 			}
-			
+
 			$time_ids = wp_list_pluck( $event_instance['relationships']['event_times']['data'], 'id' );
 			$start_date = $end_date = false;
-			
+
 			foreach( $raw['included'] as $include ) {
 				if ( ! in_array( $include['id'], $time_ids ) ) {
 					continue;
 				}
-				
+
 				if ( empty( $include['attributes']['visible_on_kiosks'] ) ) {
 					continue;
 				}
@@ -443,10 +443,10 @@ class PCO extends ChMS {
 			if ( ! $start_date || ! $end_date ) {
 				continue;
 			}
-			
+
 			$start_date->setTimezone( wp_timezone() );
 			$end_date->setTimezone( wp_timezone() );
-			
+
 			// Begin stuffing the output
 			$args = [
 				'chms_id'        => $event_instance['id'],
@@ -459,7 +459,7 @@ class PCO extends ChMS {
 				'thumbnail_url'  => '',
 				'meta_input'     => [
 					'registration_url' => $event['attributes']['registration_url'] ?? '',
-				],			
+				],
 				'EventStartDate'        => $start_date->format( 'Y-m-d' ),
 				'EventEndDate'          => $end_date->format( 'Y-m-d' ),
 //				'EventAllDay'           => $event[''],
@@ -571,7 +571,7 @@ class PCO extends ChMS {
 		if( $show_progress ) {
 			$progress->finish();
 		}
-		
+
 		error_log( "PULL EVENTS FINISHED " . date( 'Y-m-d H:i:s') );
 
 		$integration->process( $formatted );
@@ -594,7 +594,7 @@ class PCO extends ChMS {
 				}
 			}
 		}
-		
+
 		return $details;
 	}
 
@@ -634,7 +634,7 @@ class PCO extends ChMS {
 
 		$counter = 0;
 		foreach( $items as $group ) {
-			
+
 			$start_date = strtotime( $group['attributes']['created_at'] ?? null );
 			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
 
@@ -661,7 +661,7 @@ class PCO extends ChMS {
 			}
 
 			$item_details = $this->pull_group_details( $group, $raw['included'] );
-			
+
 			foreach( $item_details as $index => $item_data ) {
 
 				$type = $item_data['type'] ?? '';
@@ -740,7 +740,7 @@ class PCO extends ChMS {
 			<h2>Planning Center Online Plugin Options</h2>
 			<p class="description">Here you can set the parameters to authenticate to and use the Planning Center Online
 				API</p>
-			
+
 			<!-- Make a call to the WordPress function for rendering errors when settings are saved. -->
 			<?php settings_errors(); ?>
 
@@ -754,7 +754,6 @@ class PCO extends ChMS {
 				</p>
 			</form>
 		</div> <!-- /.wrap -->
-
 
 		<?php
 	} // end sandbox_plugin_display
@@ -959,40 +958,4 @@ class PCO extends ChMS {
 		return $in_tax;
 	}
 
-}
-
-class PCO_Background_Task extends \WP_Background_Process {
-	
-	/**
-	 * @var string
-	 */
-	protected $action = 'pco_event_task';
-
-	/**
-	 * Task
-	 *
-	 * Override this method to perform any actions required on each
-	 * queue item. Return the modified item for further processing
-	 * in the next pass through. Or, return false to remove the
-	 * item from the queue.
-	 *
-	 * @param mixed $item Queue item to iterate over
-	 *
-	 * @return mixed
-	 */
-	protected function task( $item ) {
-		// Actions to perform
-
-		return false;
-	}
-
-	/**
-	 * Complete
-	 *
-	 * Override if applicable, but ensure that the below actions are
-	 * performed, or, call parent::complete().
-	 */
-	protected function complete() {
-		parent::complete();
-	}
 }
