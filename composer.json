@@ -22,7 +22,6 @@
     "psr-4": {
       "CP_Connect\\": "includes/",
       "MinistryPlatform\\": "includes/Integrations/MinistryPlatform/",
-      "ChurchPlugins\\": "includes/ChurchPlugins/",
       "PlanningCenterAPI\\": "includes/ChMS/planning-center-api/src/"
     }
   },
