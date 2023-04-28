@@ -34,7 +34,6 @@ return array(
     'Doctrine\\Inflector\\' => array($vendorDir . '/doctrine/inflector/lib/Doctrine/Inflector'),
     'Doctrine\\Common\\Inflector\\' => array($vendorDir . '/doctrine/inflector/lib/Doctrine/Common/Inflector'),
     'Composer\\Installers\\' => array($vendorDir . '/composer/installers/src/Composer/Installers'),
-    'ChurchPlugins\\' => array($baseDir . '/includes/ChurchPlugins'),
     'Carbon\\' => array($vendorDir . '/nesbot/carbon/src/Carbon'),
     'CP_Connect\\' => array($baseDir . '/includes'),
 );

@@ -69,9 +69,11 @@ class ChurchCommunityBuilder extends ChMS {
 				'group_type'       => [],
 				'group_life_stage' => [],
 				'meta_input'       => [
-					'leader'       => $group->main_leader->full_name,
-					'leader_email' => $group->main_leader->email,
-					'public_url'   => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
+					'leader'           => $group->main_leader->full_name,
+					'leader_email'     => $group->main_leader->email,
+					'public_url'       => false,
+					'registration_url' => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
+					'is_group_full'    => false,
 				],
 				'thumbnail_url'    => '',
 			];
@@ -83,6 +85,12 @@ class ChurchCommunityBuilder extends ChMS {
 			if ( 'string' === gettype( $group->image ) && ! empty( $group->image ) ) {
 				$thumb_url = $group->image;
 				$args['thumbnail_url'] = $thumb_url . '#.png';
+			}
+
+			if ( ( $capacity = intval( $group->group_capacity ) ) && ( $current_members = intval( $group->current_members ) ) ) {
+				if ( $capacity <= $current_members ) {
+					$args['meta_input']['is_group_full'] = true;
+				}
 			}
 
 			$address_city = ( !empty( $group->addresses->address->city ) && 'string' == gettype( $group->addresses->address->city ) ) ? $group->addresses->address->city : '';
