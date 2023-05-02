@@ -73,7 +73,7 @@ class ChurchCommunityBuilder extends ChMS {
 					'leader_email'     => $group->main_leader->email,
 					'public_url'       => false,
 					'registration_url' => $this->api()->get_base_url( 'group_detail.php?group_id=' . esc_attr( $group->{'@attributes'}->id ) ),
-					'is_group_full'    => false,
+					'is_group_full'    => 0,
 				],
 				'thumbnail_url'    => '',
 			];
@@ -89,7 +89,7 @@ class ChurchCommunityBuilder extends ChMS {
 
 			if ( ( $capacity = intval( $group->group_capacity ) ) && ( $current_members = intval( $group->current_members ) ) ) {
 				if ( $capacity <= $current_members ) {
-					$args['meta_input']['is_group_full'] = true;
+					$args['meta_input']['is_group_full'] = 'on';
 				}
 			}
 
@@ -112,7 +112,7 @@ class ChurchCommunityBuilder extends ChMS {
 				}
 			}
 
-			$args['meta_input']['kid_friendly'] = ( ( 'true' == $group->childcare_provided ) && 'string' == gettype( $group->childcare_provided ) ) ? true : false;
+			$args['meta_input']['kid_friendly'] = ( ( 'true' == $group->childcare_provided ) && 'string' == gettype( $group->childcare_provided ) ) ? 'on' : 0;
 
 			if ( ! empty( $group->campus ) ) {
 				// if ( $location = $this->get_location_term( $group->campus ) ) {
