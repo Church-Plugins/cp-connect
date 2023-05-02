@@ -19,6 +19,9 @@ npm run build
 
 ### Change Log
 
+#### 1.0.2
+* Add CCB support
+
 #### 1.0.1
 * Better handling for location setting
 * Update post after initial save to handle duplicate slugs
