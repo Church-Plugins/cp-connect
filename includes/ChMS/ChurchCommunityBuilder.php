@@ -115,38 +115,14 @@ class ChurchCommunityBuilder extends ChMS {
 			$args['meta_input']['kid_friendly'] = ( ( 'true' == $group->childcare_provided ) && 'string' == gettype( $group->childcare_provided ) ) ? 'on' : 0;
 
 			if ( ! empty( $group->campus ) ) {
-				// if ( $location = $this->get_location_term( $group->campus ) ) {
-					$args['cp_location'] = $group->campus;
-				// }
+				$args['cp_location'] = $group->campus;
 			}
 
 			if ( ! empty( $group->group_type ) ) {
 				$args['group_type'][] = $group->group_type;
 			}
 
-			$additional_fields = array();
-			if ( ! empty( (array) $group->user_defined_fields ) ) {
-				if ( 'array' == gettype( $group->user_defined_fields->user_defined_field ) ) {
-					$additional_fields = $group->user_defined_fields->user_defined_field;
-				} elseif ( 'object' == gettype( $group->user_defined_fields->user_defined_field ) ) {
-					$additional_fields[] = $group->user_defined_fields->user_defined_field;
-				}
-			}
-
-			// @TODO this should be a filter so it's not specific to ChristPres
-			foreach ( $additional_fields as $field ) {
-
-				if ( 'Life Stage' == ( $field->label ) ) {
-					$args['group_life_stage'][] = $field->selection;
-				}
-
-				if ( 'Gender' == ( $field->label ) ) {
-					$args['group_category'][] = $field->selection;
-				}
-
-			}
-
-			$formatted[] = $args;
+			$formatted[] = apply_filters( 'cp_connect_ccb_pull_groups_group', $args, $group );
 		}
 
 		$integration->process( $formatted );
