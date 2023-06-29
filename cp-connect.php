@@ -3,7 +3,7 @@
  * Plugin Name: CP Connect
  * Plugin URL: https://churchplugins.com
  * Description: ChurchPlugins integration plugin for ChMS
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Church Plugins
  * Author URI: https://churchplugins.com
  * Text Domain: cp-connect
@@ -12,7 +12,7 @@
 
 if( !defined( 'CP_CONNECT_PLUGIN_VERSION' ) ) {
 	 define ( 'CP_CONNECT_PLUGIN_VERSION',
-	 	'1.0.1'
+	 	'1.0.2'
 	);
 }
 
