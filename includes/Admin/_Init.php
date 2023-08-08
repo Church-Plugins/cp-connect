@@ -49,9 +49,13 @@ class _Init {
 	 *
 	 * @return void
 	 */
-	protected function actions() {}
+	protected function actions() {
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+	}
 
 	/** Actions ***************************************************/
 
-
+	public function enqueue() {
+		wp_enqueue_script( 'cp-connect-admin', CP_CONNECT_PLUGIN_URL . 'assets/js/admin.js', [ 'jquery' ], CP_CONNECT_PLUGIN_VERSION );
+	}
 }

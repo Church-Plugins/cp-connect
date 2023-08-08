@@ -1,0 +1,33 @@
+
+.cp-connect-field-select__options {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	max-width: 1000px;
+	gap: 12px;
+}
+
+.cp-connect-field-select-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+
+	input {
+		flex: 1;
+	}
+
+	&:hover	{
+		.cp-connect-field-select-item-remove:not(:focus) {
+			opacity: 1;
+		}
+	}
+
+	.cp-connect-field-select-item-remove {
+		display: flex;
+		align-items: center;
+		margin-bottom: 0 !important;
+	}
+
+	.cp-connect-field-select-item-remove:not(:focus) {
+		opacity: 0;
+	}
+}

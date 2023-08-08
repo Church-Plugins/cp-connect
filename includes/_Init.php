@@ -43,6 +43,7 @@ class _Init {
 		$this->enqueue = new \WPackio\Enqueue( 'cpStaff', 'dist', $this->get_version(), 'plugin', CP_CONNECT_PLUGIN_FILE );
 		add_action( 'plugins_loaded', [ $this, 'maybe_setup' ], - 9999 );
 		add_action( 'init', [ $this, 'maybe_init' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'admin_enqueue' ] );
 	}
 
 	/**
@@ -82,6 +83,11 @@ class _Init {
 	public function app_enqueue() {
 		$this->enqueue->enqueue( 'styles', 'main', [] );
 		$this->enqueue->enqueue( 'scripts', 'main', [] );
+	}
+
+	public function admin_enqueue() {
+		$this->enqueue->enqueue( 'styles', 'admin', [] );
+		$this->enqueue->enqueue( 'scripts', 'admin', [ 'js_dep' => [ 'jquery' ] ] );
 	}
 
 	/**
