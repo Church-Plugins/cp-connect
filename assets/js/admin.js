@@ -9,8 +9,7 @@ jQuery($ => {
 		const addFieldInput = $(this).find('.cp-connect-field-select__add-input')
 		const addFieldButton = $(this).find('.cp-connect-field-select__add-button')
 		const optionId = $(this).data('option-id')
-
-		// get the default options from all the select fields
+		
 		let options = Object.values( optionsContainer.data('options') || {} )
 
 		updateList()
