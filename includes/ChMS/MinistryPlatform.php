@@ -487,12 +487,10 @@ class MinistryPlatform extends ChMS {
 		$html = "";
 		if( !empty( $custom_fields ) && is_array( $custom_fields ) ) {
 
-			$valid_fields = $this->valid_fields();
-
 			foreach( $custom_fields as $key => $value ) {
 
 				$list = "<table class='form-table' role='presentation'><tbody><tr><td><select name='cp_connect_field_mapping_targets[]'>";
-				foreach( $valid_fields as $field ) {
+				foreach( array_keys( $custom_fields ) as $field ) {
 					$selected = $field === $key ? 'selected' : '';
 					$disabled = $field === 'select' ? 'disabled' : '';
 					$list .= "<option value='{$field}' {$selected} {$disabled}> {$field} </option>";
