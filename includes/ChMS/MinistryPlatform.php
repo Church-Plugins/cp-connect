@@ -332,7 +332,7 @@ class MinistryPlatform extends ChMS {
 			'Meeting_Day_ID_Table.[Meeting_Day]',
 			'Meeting_Frequency_ID_Table.[Meeting_Frequency]',
 			'dp_fileUniqueId as Image_ID',
-			'Group_Gender_ID_Table.Group_Gender_Name',
+			// 'Group_Gender_ID_Table.Group_Gender_Name',
 			'Primary_Contact_Table.Display_Name'
 		);
 	}
@@ -359,7 +359,7 @@ class MinistryPlatform extends ChMS {
 			'group_category' => 'Group_Focus',
 			'group_type' => 'Group_Type',
 			'group_life_stage' => 'Life_Stage',
-			'gender' => 'Group_Gender_Name'
+			// 'gender' => 'Group_Gender_Name'
 		);
 	}
 
@@ -386,7 +386,7 @@ class MinistryPlatform extends ChMS {
 			'group_category' => 'Group Focus',
 			'group_type' => 'Group Type',
 			'group_life_stage' => 'Life Stage',
-			'gender' => 'Gender'
+			// 'gender' => 'Gender'
 		);
 	}
 
