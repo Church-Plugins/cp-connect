@@ -686,7 +686,6 @@ class MinistryPlatform extends ChMS {
 		$groups = $table
 								->select( implode( ',', $fields ) )
 								->filter( $filter )
-								->top(10)
 								->get();
 
 		if( $table->errorMessage() ) {
@@ -741,7 +740,7 @@ class MinistryPlatform extends ChMS {
 
 			if( isset( $mapped_values['thumbnail_url'] ) ) {
 				$url = get_option( 'ministry_platform_api_config' );
-				$url = isset( $option[ 'MP_API_ENDPOINT' ] ) ? $option[ 'MP_API_ENDPOINT' ] : '';
+				$url = isset( $url[ 'MP_API_ENDPOINT' ] ) ? $url[ 'MP_API_ENDPOINT' ] : '';
 				$args['thumbnail_url'] = $url . '/files/' . $mapped_values['thumbnail_url'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
 
