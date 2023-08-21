@@ -806,17 +806,6 @@ class MinistryPlatform extends ChMS {
 		$custom_mappings = get_option( 'cp_group_custom_field_mapping', [] );
 		$custom_mapping_data = array();
 
-		// array(
-		// 	'field_name' => 'City',
-		// 	'display_name' => 'Gender',
-		// 	'slug' => 'gender',
-		// 	'options' => array(
-		// 		'Men',
-		// 		'Women',
-		// 		'Co-Ed'
-		// 	)
-		// );
-
 		foreach ( $groups as $group ) {
 			$mapped_values = $this->get_mapped_values( $group, $group_mapping );
 
