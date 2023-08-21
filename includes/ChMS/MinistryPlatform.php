@@ -791,7 +791,7 @@ class MinistryPlatform extends ChMS {
 		$groups = $table
 								->select( implode( ',', $fields ) )
 								->filter( $filter )
-								->top(10)
+								// ->top(10)
 								->get();
 
 		if( $table->errorMessage() ) {
