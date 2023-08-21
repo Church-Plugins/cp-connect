@@ -783,7 +783,7 @@ class MinistryPlatform extends ChMS {
 			return false;
 		}
 
-		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" );
+		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "(Groups.End_Date >= getdate() OR Groups.End_Date IS NULL) AND Group_Gender_Id_Table.Group_Gender_Name IS NOT NULL" );
 
 		$fields = $this->get_all_group_mapping_fields();
 
@@ -791,6 +791,7 @@ class MinistryPlatform extends ChMS {
 		$groups = $table
 								->select( implode( ',', $fields ) )
 								->filter( $filter )
+								->top(10)
 								->get();
 
 		if( $table->errorMessage() ) {
@@ -801,6 +802,20 @@ class MinistryPlatform extends ChMS {
 		$group_mapping = isset( $group_mapping['mapping'] ) ? $group_mapping['mapping'] : $this->get_default_group_mapping();
 
 		$formatted = [];
+
+		$custom_mappings = get_option( 'cp_group_custom_field_mapping', [] );
+		$custom_mapping_data = array();
+
+		// array(
+		// 	'field_name' => 'City',
+		// 	'display_name' => 'Gender',
+		// 	'slug' => 'gender',
+		// 	'options' => array(
+		// 		'Men',
+		// 		'Women',
+		// 		'Co-Ed'
+		// 	)
+		// );
 
 		foreach ( $groups as $group ) {
 			$mapped_values = $this->get_mapped_values( $group, $group_mapping );
@@ -894,8 +909,54 @@ class MinistryPlatform extends ChMS {
 				$args['gender'] = $mapped_values['gender'];
 			}
 
+			/** 
+			 * Builds the custom data needed for getting available group options in metadata
+			 */
+			foreach( array_keys( $group ) as $key ) {
+				if( ! isset( $custom_mappings[$key] ) ) {
+					continue;
+				}
+				if( ! $group[$key] ) {
+					continue;
+				}
+
+				if( ! ( isset( $custom_mapping_data[$key] ) && $custom_mapping_data[$key] ) ) {
+					$custom_mapping_data[$key] = array(
+						'field_name' => $key,
+						'display_name' => $custom_mappings[$key],
+						'slug' => 'cp_connect_' . sanitize_title( $custom_mappings[$key] ),
+						'options' => array()
+					);
+				}
+				
+				// no duplicate options
+				if( ! in_array( $group[$key], $custom_mapping_data[$key]['options'] ) ) {
+					$option_slug = sanitize_title( $group[$key] );
+					$custom_mapping_data[$key]['options'][$option_slug] = $group[$key];
+				}
+			}
+
+			foreach( $custom_mappings as $field => $display_name ) {
+				if( ! isset( $group[$field] ) || ! $group[$field] ) {
+					continue;
+				}
+
+				$slug = 'cp_connect_' . sanitize_title( $display_name );
+				$original_slug = $slug;
+				$suffix = 1;
+
+				while( isset( $args['meta_input'][$slug] ) ) {
+					$slug = $original_slug . '-' . $suffix;
+					$suffix += 1;
+				}
+
+				$args['meta_input'][$slug] = sanitize_title( $group[$field] );
+			}
+
 			$formatted[] = $args;
 		}
+
+		update_option( 'cp_group_custom_meta_mapping', $custom_mapping_data, 'no' );
 
 		$integration->process( $formatted );
 	}
