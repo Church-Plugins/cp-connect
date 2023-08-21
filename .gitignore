@@ -9,3 +9,4 @@ package-lock.json
 .vscode
 app/templates/*.rt.js
 /package/
+/vendor/
