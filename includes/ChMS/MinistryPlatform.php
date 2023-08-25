@@ -783,7 +783,7 @@ class MinistryPlatform extends ChMS {
 			return false;
 		}
 
-		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "(Groups.End_Date >= getdate() OR Groups.End_Date IS NULL) AND Group_Gender_Id_Table.Group_Gender_Name IS NOT NULL" );
+		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" );
 
 		$fields = $this->get_all_group_mapping_fields();
 
