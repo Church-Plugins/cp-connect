@@ -3,7 +3,7 @@
 namespace CP_Connect\ChMS;
 
 use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
-use CP_Connect\Setup\Convenience as _C;
+
 
 /**
  * Ministry Platform Integration provider
@@ -53,7 +53,6 @@ class MinistryPlatform extends ChMS {
 				<a href='?page=ministry_platform_plugin_options&tab=connect' class='nav-tab <?php echo $tab == 'connect' ? 'nav-tab-active' : ''; ?>'><?php esc_html_e( 'Connect', 'cp-connect' ) ?></a>
 				<a href='?page=ministry_platform_plugin_options&tab=group-options' class='nav-tab <?php echo $tab == 'group-options' ? 'nav-tab-active' : ''; ?>'><?php esc_html_e( 'Group Options', 'cp-connect' ) ?></a>
 			</nav>
-			<?php settings_errors(); ?>
 			<form method="post" action=<?php echo esc_url( add_query_arg( 'tab', $tab, admin_url( 'options.php' ) ) ) ?>>
 				<?php switch ( $tab ) {
 					case 'connect':
@@ -664,6 +663,11 @@ class MinistryPlatform extends ChMS {
 		}
 	}
 
+	/**
+	 * Handles pulling events from Ministry Platform
+	 * 
+	 * @param \CP_Connect\Integrations\TEC $integration
+	 */
 	public function pull_events( $integration ) {
 
 		// TODO: Update data
@@ -772,6 +776,11 @@ class MinistryPlatform extends ChMS {
 		$integration->process( $formatted );
 	}
 
+	/**
+	 * Handles pulling groups from Ministry Platform
+	 * 
+	 * @param \CP_Connect\Integrations\CP_Groups $integration
+	 */
 	public function pull_groups( $integration ) {
 
 		// TODO: Update data
@@ -892,10 +901,6 @@ class MinistryPlatform extends ChMS {
 
 			if( isset( $mapped_values['group_life_stage'] ) ) {
 				$args['group_life_stage'][] = $mapped_values['group_life_stage'];
-			}
-
-			if( isset( $mapped_values['gender'] ) ) {
-				$args['gender'] = $mapped_values['gender'];
 			}
 
 			/** 
