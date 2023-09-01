@@ -48,11 +48,16 @@ class _Init {
 	 * @return void
 	 */
 	public function includes() {
-		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+
+		// TODO: Add a frontend tool for managing the ChMS integration
+		$active_chms = apply_filters( 'cp_connect_active_chms', 'rock' );
 
 		switch( $active_chms ) {
 			case 'mp':
 				MinistryPlatform::get_instance();
+				break;
+			case 'rock':
+				RockRMS::get_instance();
 				break;
 			case 'pco' :
 				$pco = PCO::get_instance();
