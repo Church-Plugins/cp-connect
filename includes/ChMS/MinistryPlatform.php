@@ -106,11 +106,11 @@ class MinistryPlatform extends ChMS {
 
 		/* Introduce the fields for the configuration information. */
 		add_settings_field(
-			'MP_API_ENDPOINT',                                    // ID used to identify the field throughout the theme
-			'API Endpoint',                                       // The label to the left of the option interface element
-			[ $this, 'mp_api_endpoint_callback' ],                // The name of the function responsible for rendering the option interface
-			$api_config_tab,                                      // The tab on which this option will be displayed
-			$api_config_option,                                   // The option name to which this field belongs
+			'MP_API_ENDPOINT',                                    // ID used to identify the field throughout the theme.
+			'API Endpoint',                                       // The label to the left of the option interface element.
+			[ $this, 'mp_api_endpoint_callback' ],                // The name of the function responsible for rendering the option interface.
+			$api_config_tab,                                      // The tab on which this option will be displayed.
+			$api_config_option,                                   // The option name to which this field belongs.
 			[ 'ex: https://my.mychurch.org/ministryplatformapi' ] // The array of arguments to pass to the callback. In this case, just a description.
 		);
 
@@ -153,29 +153,32 @@ class MinistryPlatform extends ChMS {
 		/*** End API Configuration Settings ***/
 	}
 
+	/**
+	 * Get valid field names from the MP API.
+	 */
 	protected function valid_fields() {
 		$valid_fields = array( 'select' );
 
-		// initialize the MP API wrapper
+		// initialize the MP API wrapper.
 		$mp = new MP();
 
-		// Authenticate to get access token required for API calls
-		if( $mp->authenticate() ) {
+		// Authenticate to get access token required for API calls.
+		if ( $mp->authenticate() ) {
 
 			$fields = $this->get_all_group_mapping_fields();
 
-			// get the list of fields from the Groups table
+			// get the list of fields from the Groups table.
 			$table = $mp->table( 'Groups' );
 
-			// gets a group from API just to verify that all specified fields exist
-			$group = $table->select( implode( ',', $fields ) )->top(1)->get();
+			// gets a group from API just to verify that all specified fields exist.
+			$group = $table->select( implode( ',', $fields ) )->top( 1 )->get();
 
-			if( $group && count( $group ) > 0 ) {
+			if ( $group && count( $group ) > 0 ) {
 				$group = $group[0];
 			}
 
-			// adds column names from group response to the available fields
-			if( ! empty( $group ) ) {
+			// adds column names from group response to the available fields.
+			if ( ! empty( $group ) ) {
 				$valid_fields = array_merge( $valid_fields, array_keys( $group ) );
 			}
 		}
@@ -331,8 +334,10 @@ class MinistryPlatform extends ChMS {
 			'Meeting_Day_ID_Table.[Meeting_Day]',
 			'Meeting_Frequency_ID_Table.[Meeting_Frequency]',
 			'dp_fileUniqueId as Image_ID',
-			// 'Group_Gender_ID_Table.Group_Gender_Name',
-			'Primary_Contact_Table.Display_Name'
+			'Primary_Contact_Table.Display_Name',
+			'Child_Friendly_Group',
+			'Accessible',
+			'Meets_Online',
 		);
 	}
 
@@ -341,24 +346,26 @@ class MinistryPlatform extends ChMS {
 	 */
 	protected function get_default_group_mapping() {
 		return array(
-			'chms_id' => 'Group_ID',
-			'post_title' => 'Group_Name',
-			'post_content' => 'Description',
-			'leader' => 'Display_Name',
-			'start_date' => 'Start_Date',
-			'end_date' => 'End_Date',
-			'thumbnail_url' => 'Image_ID',
-			'frequency' => 'Meeting_Frequency',
-			'city' => 'City',
-			'state_or_region' => 'State/Region',
-			'postal_code' => 'Postal_Code',
-			'meeting_time' => 'Meeting_Time',
-			'meeting_day' => 'Meeting_Day',
-			'cp_location' => 'Congregation_ID',
-			'group_category' => 'Group_Focus',
-			'group_type' => 'Group_Type',
-			'group_life_stage' => 'Life_Stage',
-			// 'gender' => 'Group_Gender_Name'
+			'chms_id'             => 'Group_ID',
+			'post_title'          => 'Group_Name',
+			'post_content'        => 'Description',
+			'leader'              => 'Display_Name',
+			'start_date'          => 'Start_Date',
+			'end_date'            => 'End_Date',
+			'thumbnail_url'       => 'Image_ID',
+			'frequency'           => 'Meeting_Frequency',
+			'city'                => 'City',
+			'state_or_region'     => 'State/Region',
+			'postal_code'         => 'Postal_Code',
+			'meeting_time'        => 'Meeting_Time',
+			'meeting_day'         => 'Meeting_Day',
+			'cp_location'         => 'Congregation_ID',
+			'group_category'      => 'Group_Focus',
+			'group_type'          => 'Group_Type',
+			'group_life_stage'    => 'Life_Stage',
+			'kid_friendly'        => 'Child_Friendly_Group',
+			'handicap_accessible' => 'Accessible',
+			'virtual'             => 'Meets_Online',
 		);
 	}
 
@@ -367,47 +374,49 @@ class MinistryPlatform extends ChMS {
 	 */
 	protected function get_group_field_names() {
 		return array(
-			'chms_id' => 'Group ID',
-			'post_title' => 'Group Name',
-			'post_content' => 'Description',
-			'leader' => 'Group Leader',
-			'start_date' => 'Start Date',
-			'end_date' => 'End Date',
-			'thumbnail_url' => 'Image ID',
-			'frequency' => 'Meeting Frequency',
-			'location' => 'Congregation ID',
-			'city' => 'City',
-			'state_or_region' => 'State/Region',
-			'postal_code' => 'Postal Code',
-			'meeting_time' => 'Meeting Time',
-			'meeting_day' => 'Meeting Day',
-			'cp_location' => 'Group Campus',
-			'group_category' => 'Group Focus',
-			'group_type' => 'Group Type',
-			'group_life_stage' => 'Life Stage',
-			// 'gender' => 'Gender'
+			'chms_id'             => 'Group ID',
+			'post_title'          => 'Group Name',
+			'post_content'        => 'Description',
+			'leader'              => 'Group Leader',
+			'start_date'          => 'Start Date',
+			'end_date'            => 'End Date',
+			'thumbnail_url'       => 'Image ID',
+			'frequency'           => 'Meeting Frequency',
+			'location'            => 'Congregation ID',
+			'city'                => 'City',
+			'state_or_region'     => 'State/Region',
+			'postal_code'         => 'Postal Code',
+			'meeting_time'        => 'Meeting Time',
+			'meeting_day'         => 'Meeting Day',
+			'cp_location'         => 'Group Campus',
+			'group_category'      => 'Group Focus',
+			'group_type'          => 'Group Type',
+			'group_life_stage'    => 'Life Stage',
+			'kid_friendly'        => 'Child Friendly',
+			'handicap_accessible' => 'Accessible',
+			'virtual'             => 'Virtual',
 		);
 	}
 
 	/**
 	 * Render a interface to select additional fields to grab from the API
 	 *
-	 * @param string $option_id The option id
+	 * @param string $option_id The option id.
 	 */
-	function render_field_select( $option_id ) {
+	public function render_field_select( $option_id ) {
 		$option = get_option( $option_id );
 
 		$fields = isset( $option['fields'] ) ? $option['fields'] : array();
 
 		$mp = new MP();
 
-		if( $mp->authenticate() ) {
+		if ( $mp->authenticate() ) {
 			$table = $mp->table( 'Groups' );
 
-			// makes a dummy request just to get any error messages from user specified fields
-			$table->select( implode( ',', $this->get_all_group_mapping_fields() ) )->top(1)->get();
+			// makes a dummy request just to get any error messages from user specified fields.
+			$table->select( implode( ',', $this->get_all_group_mapping_fields() ) )->top( 1 )->get();
 
-			$error = $table->errorMessage() ? json_decode( $table->errorMessage(), true ) : false;
+			$error = $table->errorMessage() ? json_decode( (string) $table->errorMessage(), true ) : false;
 		}
 		?>
 
@@ -415,19 +424,19 @@ class MinistryPlatform extends ChMS {
 			<p>This is the current query being made to Ministry Platform</p>
 			<h4>SELECT</h4>
 			<code>
-				<?php echo implode( ',', $this->get_all_group_mapping_fields() ) ?>
+				<?php echo implode( ',', $this->get_all_group_mapping_fields() ); ?>
 			</code>
 			<p>Specify additional fields to grab</p>
-			<ul class="cp-connect-field-select__options" data-options="<?php echo htmlspecialchars( json_encode( array_values( $fields ) ), ENT_QUOTES, 'UTF-8' ) ?>"></ul>
+			<ul class="cp-connect-field-select__options" data-options="<?php echo htmlspecialchars( json_encode( array_values( $fields ) ), ENT_QUOTES, 'UTF-8' ); ?>"></ul>
 			<div class="cp-connect-field-select__add">
 				<input class="cp-connect-field-select__add-input" type="text" placeholder="Table_Name.Field_Name" />
 				<button class="cp-connect-field-select__add-button button button-primary" type="button">Add</button>
 			</div>
 			<!-- displays an error message if one exists -->
-			<?php if( $error ) : ?>
+			<?php if ( $error ) : ?>
 				<div>
 					<h4>Ministry Platform API Error</h4>
-					<code><?php echo $error['Message'] ?></code>
+					<code><?php echo $error['Message']; ?></code>
 				</div>
 			<?php endif; ?>
 		</div>
@@ -438,7 +447,7 @@ class MinistryPlatform extends ChMS {
 	/**
 	 * Get all tables to grab from the API
 	 */
-	function get_all_group_mapping_fields() {
+	public function get_all_group_mapping_fields() {
 		$fields = get_option( 'ministry_platform_group_mapping' );
 		$fields = isset( $fields['fields'] ) ? $fields['fields'] : array();
 
@@ -448,7 +457,7 @@ class MinistryPlatform extends ChMS {
 	/**
 	 * Render the API configuration tab
 	 */
-	function render_api_config_tab() {
+	public function render_api_config_tab() {
 		settings_fields( 'ministry_platform_api_config_group' );
 		do_settings_sections( 'ministry_platform_api_config_tab' );
 		?>
@@ -462,7 +471,7 @@ class MinistryPlatform extends ChMS {
 	/**
 	 * Render the Group Mapping tab
 	 */
-	function render_group_mapping_tab() {
+	public function render_group_mapping_tab() {
 		settings_fields( 'ministry_platform_group_mapping_group' );
 		do_settings_sections( 'ministry_platform_group_mapping_tab' );
 		$this->render_custom_mappings();
@@ -483,13 +492,13 @@ class MinistryPlatform extends ChMS {
 
 		$custom_fields = get_option( 'cp_group_custom_field_mapping', [] );
 
-		$html = "";
-		if( !empty( $custom_fields ) && is_array( $custom_fields ) ) {
+		$html = '';
+		if ( ! empty( $custom_fields ) && is_array( $custom_fields ) ) {
 
-			foreach( $custom_fields as $key => $value ) {
+			foreach ( $custom_fields as $key => $value ) {
 
 				$list = "<table class='form-table' role='presentation'><tbody><tr><td><select name='cp_connect_field_mapping_targets[]'>";
-				foreach( array_keys( $custom_fields ) as $field ) {
+				foreach ( array_keys( $custom_fields ) as $field ) {
 					$selected = $field === $key ? 'selected' : '';
 					$disabled = $field === 'select' ? 'disabled' : '';
 					$list .= "<option value='{$field}' {$selected} {$disabled}> {$field} </option>";
@@ -777,9 +786,9 @@ class MinistryPlatform extends ChMS {
 	}
 
 	/**
-	 * Handles pulling groups from Ministry Platform
-	 * 
-	 * @param \CP_Connect\Integrations\CP_Groups $integration
+	 * Performs a pull of groups from Ministry Platform
+	 *
+	 * @param \CP_Connect\Integrations\CP_Groups $integration The integration object.
 	 */
 	public function pull_groups( $integration ) {
 
@@ -818,51 +827,51 @@ class MinistryPlatform extends ChMS {
 		foreach ( $groups as $group ) {
 			$mapped_values = $this->get_mapped_values( $group, $group_mapping );
 
-			$args = [
+			$args = array(
 				'chms_id'          => '',
 				'post_status'      => 'publish',
 				'post_title'       => '',
 				'post_content'     => '',
-				'tax_input'        => [],
-				'group_category'   => [],
-				'group_type'       => [],
-				'group_life_stage' => [],
-				'meta_input'       => [],
+				'tax_input'        => array(),
+				'group_category'   => array(),
+				'group_type'       => array(),
+				'group_life_stage' => array(),
+				'meta_input'       => array(),
 				'thumbnail_url'    => '',
-				'break' => 11,
-			];
+				'break'            => 11,
+			);
 
-			if( isset( $mapped_values['chms_id'] ) ) {
+			if ( isset( $mapped_values['chms_id'] ) ) {
 				$args['chms_id']      = $mapped_values['chms_id'];
 			}
 
-			if( isset( $mapped_values['post_content'] ) ) {
+			if ( isset( $mapped_values['post_content'] ) ) {
 				$args['post_content'] = $mapped_values['post_content'];
 			}
 
-			if( isset( $mapped_values['post_title'] ) ) {
+			if ( isset( $mapped_values['post_title'] ) ) {
 				$args['post_title'] = $mapped_values['post_title'];
 			}
 
-			if( isset( $mapped_values['leader'] ) ) {
+			if ( isset( $mapped_values['leader'] ) ) {
 				$args['meta_input']['leader'] = $mapped_values['leader'];
 			}
 
-			if( isset( $mapped_values['start_date'] ) ) {
+			if ( isset( $mapped_values['start_date'] ) ) {
 				$args['meta_input']['start_date'] = date( 'Y-m-d', strtotime( $mapped_values['start_date'] ) );
 			}
 
-			if( isset( $mapped_values['end_date'] ) ) {
+			if ( isset( $mapped_values['end_date'] ) ) {
 				$args['meta_input']['end_date'] = date( 'Y-m-d', strtotime( $mapped_values['end_date'] ) );
 			}
 
-			if( isset( $mapped_values['thumbnail_url'] ) ) {
+			if ( isset( $mapped_values['thumbnail_url'] ) ) {
 				$url = get_option( 'ministry_platform_api_config' );
 				$url = isset( $url[ 'MP_API_ENDPOINT' ] ) ? $url[ 'MP_API_ENDPOINT' ] : '';
 				$args['thumbnail_url'] = $url . '/files/' . $mapped_values['thumbnail_url'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '.jpeg';
 			}
 
-			if( isset( $mapped_values['frequency'] ) ) {
+			if ( isset( $mapped_values['frequency'] ) ) {
 				$args['meta_input']['frequency'] = $mapped_values['frequency'];
 			}
 
@@ -872,79 +881,92 @@ class MinistryPlatform extends ChMS {
 				$args['meta_input']['location'] = sprintf( "%s, %s %s", $mapped_values['city'], $state_or_region, $postal_code );
 			}
 
-			if( isset( $mapped_values['time_desc'] ) ) {
+			if ( isset( $mapped_values['time_desc'] ) ) {
 				$args['meta_input']['time_desc'] = $mapped_values['time_desc'];
 			}
 
-			if( isset( $mapped_values['meeting_time'] ) ) {
-				$args['meta_input']['time_desc'] = date( 'g:ia', strtotime( $mapped_values[ 'meeting_time' ] ) );
+			if ( isset( $mapped_values['meeting_time'] ) ) {
+				$args['meta_input']['time_desc'] = gmdate( 'g:ia', strtotime( $mapped_values['meeting_time'] ) );
 
 				if ( ! empty( $mapped_values['meeting_day'] ) ) {
-					$args['meta_input']['time_desc'] = $mapped_values['meeting_day'] . 's at ' . $args['meta_input']['time_desc'];
+					$args['meta_input']['time_desc']   = $mapped_values['meeting_day'] . 's at ' . $args['meta_input']['time_desc'];
 					$args['meta_input']['meeting_day'] = $mapped_values['meeting_day'];
 				}
 			}
 
-			if( isset( $mapped_values['cp_location'] ) ) {
-				if( $location = $this->get_location_term( $mapped_values['cp_location'] ) ) {
+			if ( isset( $mapped_values['cp_location'] ) ) {
+				$location = $this->get_location_term( $mapped_values['cp_location'] );
+				if ( $location ) {
 					$args['cp_location'] = $location;
 				}
 			}
 
-			if( isset( $mapped_values['group_category'] ) ) {
+			if ( isset( $mapped_values['group_category'] ) ) {
 				$args['group_category'][] = $mapped_values['group_category'];
 			}
 
-			if( isset( $mapped_values['group_type'] ) ) {
+			if ( isset( $mapped_values['group_type'] ) ) {
 				$args['group_type'][] = $mapped_values['group_type'];
 			}
 
-			if( isset( $mapped_values['group_life_stage'] ) ) {
+			if ( isset( $mapped_values['group_life_stage'] ) ) {
 				$args['group_life_stage'][] = $mapped_values['group_life_stage'];
 			}
 
-			/** 
+			if ( isset( $mapped_values['kid_friendly'] ) ) {
+				$args['meta_input']['kid_friendly'] = (bool) $mapped_values['kid_friendly'] ? 'on' : 'off';
+			}
+
+			if ( isset( $mapped_values['handicap_accessible'] ) ) {
+				$args['meta_input']['handicap_accessible'] = (bool) $mapped_values['handicap_accessible'] ? 'on' : 'off';
+			}
+
+			if ( isset( $mapped_values['virtual'] ) ) {
+				$args['meta_input']['virtual'] = (bool) $mapped_values['virtual'] ? 'on' : 'off';
+			}
+
+			/**
 			 * Builds the custom data needed for getting available group options in metadata
 			 */
-			foreach( array_keys( $group ) as $key ) {
-				if( ! isset( $custom_mappings[$key] ) ) {
+			foreach ( array_keys( $group ) as $key ) {
+				if ( ! isset( $custom_mappings[ $key ] ) ) {
 					continue;
 				}
-				if( ! $group[$key] ) {
+				if ( ! $group[ $key ] ) {
 					continue;
 				}
 
-				if( ! ( isset( $custom_mapping_data[$key] ) && $custom_mapping_data[$key] ) ) {
-					$custom_mapping_data[$key] = array(
-						'field_name' => $key,
-						'display_name' => $custom_mappings[$key],
-						'slug' => 'cp_connect_' . sanitize_title( $custom_mappings[$key] ),
-						'options' => array()
+				if ( ! ( isset( $custom_mapping_data[ $key ] ) && $custom_mapping_data[ $key ] ) ) {
+					$custom_mapping_data[ $key ] = array(
+						'field_name'   => $key,
+						'display_name' => $custom_mappings[ $key ],
+						'slug'         => 'cp_connect_' . sanitize_title( $custom_mappings[ $key ] ),
+						'options'      => array(),
 					);
 				}
-				
-				// no duplicate options
-				if( ! in_array( $group[$key], $custom_mapping_data[$key]['options'] ) ) {
-					$option_slug = sanitize_title( $group[$key] );
-					$custom_mapping_data[$key]['options'][$option_slug] = $group[$key];
+
+				// no duplicate options.
+				if ( ! in_array( $group[ $key ], $custom_mapping_data[ $key ]['options'] ) ) {
+					$option_slug = sanitize_title( $group[ $key ] );
+					$custom_mapping_data[ $key ]['options'][ $option_slug ] = $group[ $key ];
 				}
 			}
 
-			foreach( $custom_mappings as $field => $display_name ) {
-				if( ! isset( $group[$field] ) || ! $group[$field] ) {
+			foreach ( $custom_mappings as $field => $display_name ) {
+				if ( ! isset( $group[ $field ] ) || ! $group[ $field ] ) {
 					continue;
 				}
 
-				$slug = 'cp_connect_' . sanitize_title( $display_name );
+				$slug          = 'cp_connect_' . sanitize_title( $display_name );
 				$original_slug = $slug;
-				$suffix = 1;
+				$suffix        = 1;
 
-				while( isset( $args['meta_input'][$slug] ) ) {
+				while ( isset( $args['meta_input'][ $slug ] ) ) {
 					$slug = $original_slug . '-' . $suffix;
-					$suffix += 1;
+					$suffix++;
 				}
 
-				$args['meta_input'][$slug] = sanitize_title( $group[$field] );
+				$args['meta_input'][ $slug ] = sanitize_title( $group[ $field ] );
 			}
 
 			$formatted[] = $args;
