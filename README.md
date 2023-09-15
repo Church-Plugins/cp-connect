@@ -19,6 +19,9 @@ npm run build
 
 ### Change Log
 
+#### 1.0.3
+* Add more mapping fields for MinistryPlatform
+
 #### 1.0.2
 * Add CCB support
 
