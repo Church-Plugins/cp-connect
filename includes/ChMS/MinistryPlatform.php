@@ -674,7 +674,7 @@ class MinistryPlatform extends ChMS {
 
 	/**
 	 * Handles pulling events from Ministry Platform
-	 * 
+	 *
 	 * @param \CP_Connect\Integrations\TEC $integration
 	 */
 	public function pull_events( $integration ) {
@@ -914,15 +914,15 @@ class MinistryPlatform extends ChMS {
 			}
 
 			if ( isset( $mapped_values['kid_friendly'] ) ) {
-				$args['meta_input']['kid_friendly'] = (bool) $mapped_values['kid_friendly'] ? 'on' : 'off';
+				$args['meta_input']['kid_friendly'] = (bool) $mapped_values['kid_friendly'] ? 'on' : false;
 			}
 
 			if ( isset( $mapped_values['handicap_accessible'] ) ) {
-				$args['meta_input']['handicap_accessible'] = (bool) $mapped_values['handicap_accessible'] ? 'on' : 'off';
+				$args['meta_input']['handicap_accessible'] = (bool) $mapped_values['handicap_accessible'] ? 'on' : false;
 			}
 
 			if ( isset( $mapped_values['virtual'] ) ) {
-				$args['meta_input']['virtual'] = (bool) $mapped_values['virtual'] ? 'on' : 'off';
+				$args['meta_input']['virtual'] = (bool) $mapped_values['virtual'] ? 'on' : false;
 			}
 
 			/**
