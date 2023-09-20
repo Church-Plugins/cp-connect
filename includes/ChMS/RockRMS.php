@@ -144,9 +144,9 @@ class RockRMS extends ChMS {
 		?>
 			<!-- Add the icon to the page -->
 			<div id="icon-themes" class="icon32"></div>
-			<h2>Rock RMS Plugin Options</h2>
-			<p class="description">Here you can set the parameters to authenticate to and use the Rock RMS API</p>
-			<p>The following parameters are required to authenticate to the API using oAuth and then execute API calls to Rock RMS.</p>
+			<h2><?php _e( 'Rock RMS Plugin Options', 'cp-connect' ); ?></h2>
+			<p class="description"><?php _e( 'Set the parameters to authenticate to and use the Rock RMS API below', 'cp-connect' ); ?></p>
+			<p><?php _e( 'The following parameters are required to authenticate to the API and execute API calls to Rock RMS.', 'cp-connect' ); ?></p>
 		<?php
 	}
 
@@ -227,19 +227,63 @@ class RockRMS extends ChMS {
 	 */
 	public function pull_groups( $integration ) {
 
+		$group_type_ids = $this->pull_group_type_ids();
+
 		$params = [
-			'IsSystem'		=> 'false',
-			'IsActive'		=> 'true',
-			'IsPublic'		=> 'true'
+			'IsSystem eq false',
+			'IsActive eq true',
+			'IsPublic eq true',
+			'IsSecurityRole eq false'
 		];
+		$extra_params = implode( ' or ', array_map( function( $id ) {
+			return 'GroupTypeId eq ' . $id;
+		}, $group_type_ids ) );
+		if( !empty( $extra_params ) ) {
+			$params[] = '(' . $extra_params . ')';
+		}
 
 		$group_data = $this->remote_rest_request( 'api/Groups', 'GET', $params );
 		if( empty( $group_data ) || !is_array( $group_data ) ) {
 			return false;
 		} else {
 			_C::log( $group_data );
+
+			// 1. Add group
+
+			// 2. Add Members and leaders
+
+			// 3. Add events
 		}
 
+	}
+
+	/**
+	 * Retrieve valid/important group type IDs from Rock RMS
+	 *
+	 */
+	public function pull_group_type_ids() {
+
+		$params = [
+			'IsSystem eq false',
+			'ShowInGroupList eq true',
+			'ShowInNavigation eq true',
+		];
+
+		$return_value = [];
+
+		$group_data = $this->remote_rest_request( 'api/GroupTypes', 'GET', $params );
+		if( empty( $group_data ) || !is_array( $group_data ) ) {
+			return false;
+		} else {
+
+			foreach( $group_data as $loop_data ) {
+				if( !empty( $loop_data ) && is_object( $loop_data ) && !empty( $loop_data->Id ) ) {
+					$return_value[] = $loop_data->Id;
+				}
+			}
+		}
+
+		return $return_value;
 	}
 
 	/**
@@ -267,7 +311,11 @@ class RockRMS extends ChMS {
 
 		$endpoint = trailingslashit( $endpoint ) . $endpoint_path;
 		if( !empty( $params ) ) {
-			$endpoint .= '?' . http_build_query( $params );
+			$endpoint .= '?$filter=';// . http_build_query( $params );
+			foreach( $params as $param ) {
+				$endpoint .= preg_replace( "/\ /", "%20", $param ) . '%20and%20';
+			}
+			$endpoint = preg_replace( "/%20and%20$/", "", $endpoint );
 		}
 
 		// $endpoint .= '?filter=IsSystem%20eq%20false';
