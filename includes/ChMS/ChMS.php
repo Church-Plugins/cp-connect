@@ -39,7 +39,7 @@ abstract class ChMS {
 			delete_option( 'cp_connect_pulling' );
 			add_action('admin_notices', [ $this, 'general_admin_notice' ] );
 		}
-		
+
 		if ( isset( $_POST['cp-connect-pull'] ) ) {
 			update_option( 'cp_connect_pulling', true );
 		}
@@ -154,5 +154,102 @@ abstract class ChMS {
 	 */
 	public static function string_to_slug( $string ) {
 		return str_replace( " ", "_", strtolower( $string ) );
+	}
+
+	/**
+	 * Render the custom field mappings
+	 *
+	 * @return void
+	 * @author costmo
+	 */
+	protected function render_custom_mappings() {
+
+		$custom_fields = get_option( 'cp_group_custom_field_mapping', [] );
+
+		$html = "";
+		if( !empty( $custom_fields ) && is_array( $custom_fields ) ) {
+
+			foreach( $custom_fields as $key => $value ) {
+
+				$list = "<table class='form-table' role='presentation'><tbody><tr><td><select name='cp_connect_field_mapping_targets[]'>";
+				foreach( array_keys( $custom_fields ) as $field ) {
+					$selected = $field === $key ? 'selected' : '';
+					$disabled = $field === 'select' ? 'disabled' : '';
+					$list .= "<option value='{$field}' {$selected} {$disabled}> {$field} </option>";
+				}
+				$list .=  "</select><span class='dashicons dashicons-dismiss'></span></td></tr></tbody></table>";
+				$html .=
+					"<div class='cp-connect-field-mapping-item-container'>
+						<input type='text' name='cp_connect_field_mapping_names[]' value='{$value}' placeholder='Field Name' />
+						{$list}
+					</div>";
+			}
+		}
+
+		$return =<<<EOT
+		<div class="cp-connect-custom-mappings">
+			{$html}
+			<div class="cp-connect-custom-mappings__last_row">
+				<i class="dashicons dashicons-plus-alt cp-connect-add-field-mapping"></i>
+			</div>
+		</div>
+		EOT;
+
+
+		echo $return;
+	}
+
+	/**
+	 * The callback for displaying all group mapping fields
+	 *
+	 * @param array $args
+	 *
+	 * @return void
+	 */
+	function field_mapping_callback( $args ) {
+
+		$opt = get_option( $args['option'] );
+
+		$opt = isset( $opt['mapping'] ) ? $opt['mapping'] : array();
+
+		if( ! $opt || ! isset( $opt[ $args['key'] ] ) ) {
+			$opt = $args['default_value'];
+		}
+		else {
+			$opt = $opt[ $args['key'] ];
+		}
+
+		$options = implode( '', array_map( function( $val ) use ( $opt ) {
+			$selected_att = $opt === $val ? 'selected' : '';
+			$disabled_att = $val === 'select' ? 'disabled' : '';
+
+			return sprintf( '<option %s %s>%s</option>', $selected_att, $disabled_att, esc_html( $val ) );
+		}, $args['valid_fields'] ) );
+
+		$field_name = $args['option'] . '[mapping]' . '[' . $args['key'] . ']';
+
+		$html = sprintf( '<select name="%s" value="%s">%s</select>', esc_attr( $field_name ), esc_attr( $opt ), $options );
+
+		$html .= '<label for="title"> ' . $args['description'] . '</label>';
+
+		echo $html;
+	}
+
+	/**
+	 * Gets an object with data and a mapping array, and returns the object values associated with the mapping keys
+	 *
+	 * @param array $data The data to map
+	 * @param array $mapping The mapping array
+	 */
+	function get_mapped_values( $data, $mapping ) {
+		$mapped_values = array();
+
+		foreach( $mapping as $key => $value ) {
+			if( isset( $data[ $value ] ) ) {
+				$mapped_values[ $key ] = $data[ $value ];
+			}
+		}
+
+		return $mapped_values;
 	}
 }
