@@ -14,8 +14,9 @@ class RockRMS extends ChMS {
 
 		$this->load_connection_parameters( 'rockrms_api_config' );
 
-		add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+		add_action( 'cp_connect_pull_locations',	[ $this, 'pull_locations' ] );
+		add_action( 'cp_connect_pull_events',		[ $this, 'pull_events' ] );
+		add_action( 'cp_connect_pull_groups',		[ $this, 'pull_groups' ] );
 
 		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
 		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
@@ -442,11 +443,87 @@ class RockRMS extends ChMS {
 	}
 
 	/**
+	 * Pulls Campus location data from Rock RMS
+	 *
+	 * @param [type] $integration
+	 * @return void
+	 * @author costmo
+	 */
+	public function pull_locations( $integration ) {
+
+		// Sanity check requisite class/plugin
+		if( !class_exists( 'CP_Locations\Controllers\Location' ) ) {
+			return false;
+		}
+
+		_C::log( "PULLING CAMPUS LOCATIONS FROM ROCK RMS" );
+		$params = [
+			'IsActive eq true'
+		];
+		$campus_data = $this->remote_rest_request( 'api/Campuses', 'GET', $params );
+		$campus_output = [];
+
+		if( !empty( $campus_data ) && is_array( $campus_data ) ) {
+			foreach( $campus_data as $campus ) {
+
+				// _C::log( "CAMPUS DATA" );
+				// _C::log( $campus_data );
+
+				if( !empty( $campus ) && is_object( $campus ) && !empty( $campus->Id ) ) {
+					$campus_output[ $campus->Id ] = [
+						'Id' 					=> $campus->Id,
+						'LocationId' 			=> $campus->LocationId ?? 0,
+						'Name'					=> $campus->Name ?? '',
+						'PhoneNumber'			=> $campus->PhoneNumber ?? '',
+						'LeaderPersonAliasId'	=> $campus->LeaderPersonAliasId ?? '', // TODO: Do we need to rtrieve leader info?
+						'Address'				=> '',
+						'City'					=> '',
+						'State'					=> '',
+						'PostalCode'			=> '',
+						'Country'				=> ''
+					];
+
+					// Get address details
+					$addr_params = [
+						'Id eq ' . $campus->LocationId
+					];
+					$location_details = $this->remote_rest_request( 'api/Locations/', 'GET', $addr_params );
+
+					// _C::log( "ADDRESS DATA" );
+					// _C::log( $location_details );
+
+					if( !empty( $location_details ) && is_array( $location_details ) && !empty( $location_details[0] ) ) {
+						$campus_output[ $campus->Id ]['Address'] 	= $location_details[0]->Street1 ?? '';
+						$campus_output[ $campus->Id ]['City'] 		= $location_details[0]->City ?? '';
+						$campus_output[ $campus->Id ]['State'] 		= $location_details[0]->State ?? '';
+						$campus_output[ $campus->Id ]['PostalCode']	= $location_details[0]->PostalCode ?? '';
+						$campus_output[ $campus->Id ]['Country'] 	= $location_details[0]->Country ?? '';
+					}
+
+				}
+			}
+		}
+
+		// Data to save:
+		_C::log( "CAMPUS Data to save" );
+		_C::log( $campus_output );
+
+
+
+
+
+
+	}
+
+	/**
 	 * Handles pulling groups from Rock RMS
 	 *
 	 * @param \CP_Connect\Integrations\CP_Groups $integration
 	 */
 	public function pull_groups( $integration ) {
+
+		_C::log( "SKIP GROUP PULL FOR NOW" );
+		return;
 
 		// Get all groups, filtered by GroupType
 		$group_type_data = $this->pull_group_types() ?? [];
@@ -475,8 +552,8 @@ class RockRMS extends ChMS {
 		if( empty( $group_data ) || !is_array( $group_data ) ) {
 			return false;
 		} else {
-			// _C::log( "Groups" );
-			// _C::log( $group_data );
+			_C::log( "Groups" );
+			_C::log( $group_data );
 
 			$fields = $this->get_all_group_mapping_fields();
 

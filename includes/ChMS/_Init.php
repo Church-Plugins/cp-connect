@@ -49,14 +49,22 @@ class _Init {
 	 */
 	public function includes() {
 
-		// TODO: Add a frontend tool for managing the ChMS integration
-		$active_chms = apply_filters( 'cp_connect_active_chms', 'rock' );
+		//  Grab the value from wp-config.php
+		$active_chms = false;
+		// Get the active ChMS from CP_CONNECT_ACTIVE_CHMS, if defined
+		if( defined( 'CP_CONNECT_ACTIVE_CHMS' ) && !empty( CP_CONNECT_ACTIVE_CHMS ) ) {
+			$active_chms = CP_CONNECT_ACTIVE_CHMS;
+		} else {
+			// Fallback to Ministry Platform
+			$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+		}
+
 
 		switch( $active_chms ) {
 			case 'mp':
 				MinistryPlatform::get_instance();
 				break;
-			case 'rock':
+			case 'rockrms':
 				RockRMS::get_instance();
 				break;
 			case 'pco' :
@@ -64,6 +72,9 @@ class _Init {
 				break;
 			case 'ccb' :
 				$ccb = ChurchCommunityBuilder::get_instance();
+				break;
+			default :
+				// Do nothing
 				break;
 		}
 	}
