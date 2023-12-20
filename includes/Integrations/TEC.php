@@ -13,7 +13,7 @@ class TEC extends Integration {
 	public $label = 'Events';
 
 	public function update_item( $item ) {
-		
+
 		if ( $id = $this->get_chms_item_id( $item['chms_id'] ) ) {
 			$item['ID'] = $id;
 		}
@@ -23,13 +23,13 @@ class TEC extends Integration {
 		// Organizer does not ignore duplicates by default, so we are handling that
 		if ( isset( $item['Organizer'] ) ) {
 			$item['Organizer']['OrganizerID'] = \Tribe__Events__Organizer::instance()->create( $item['Organizer'], 'publish', true );
-			
+
 			if ( is_wp_error( $item['Organizer']['OrganizerID'] ) ) {
 				unset( $item['Organizer'] );
 				error_log( $item['Organizer']['OrganizerID']->get_error_message() );
 			}
 		}
-		
+
 		$id = tribe_create_event( $item );
 
 		if ( ! $id ) {
@@ -38,9 +38,13 @@ class TEC extends Integration {
 
 		// TEC categories
 		$categories = [];
-		foreach( $item['event_category'] as $category ) {
-			if ( ! $term = term_exists( $category, 'tribe_events_cat' ) ) {
-				$term = wp_insert_term( $category, 'tribe_events_cat' );
+		foreach( $item['event_category'] as $slug => $name ) {
+			if ( is_int( $slug ) ) {
+				$slug = sanitize_title( $name );
+			}
+
+			if ( ! $term = term_exists( $slug, 'tribe_events_cat' ) ) {
+				$term = wp_insert_term( $name, 'tribe_events_cat', [ 'slug' => $slug ] );
 			}
 
 			if ( ! is_wp_error( $term ) ) {
@@ -49,8 +53,8 @@ class TEC extends Integration {
 		}
 
 		wp_set_post_terms( $id, $categories, 'tribe_events_cat' );
-		
+
 		return $id;
 	}
-	
+
 }

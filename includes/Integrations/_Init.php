@@ -113,8 +113,8 @@ class _Init {
 	public function schedule_cron() {
 		if ( is_admin() && Settings::get( 'pull_now' ) ) {
 			Settings::set( 'pull_now', '' );
-//			add_filter( 'cp_connect_process_hard_refresh', '__return_true' );
-//			do_action( self::$_cron_hook );
+			add_filter( 'cp_connect_process_hard_refresh', '__return_true' );
+			do_action( self::$_cron_hook );
 		}
 
 		if ( wp_next_scheduled( self::$_cron_hook ) ) {
@@ -122,7 +122,7 @@ class _Init {
 		}
 
 		$args = apply_filters( 'cp_connect_cron_args', [
-			'timestamp' => time(),
+			'timestamp' => time() + HOUR_IN_SECONDS, // schedule to run in the future to allow time for setting up configuration
 			'recurrence' => 'hourly',
 		] );
 

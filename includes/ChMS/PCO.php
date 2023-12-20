@@ -12,6 +12,8 @@ use PlanningCenterAPI\PlanningCenterAPI as PlanningCenterAPI;
  */
 class PCO extends ChMS {
 
+	public $settings_key = 'cpc_pco_options';
+
 	/**
 	 * Convenience reference to an external API connection
 	 *
@@ -35,8 +37,17 @@ class PCO extends ChMS {
 		// If this integration is not configured, do not add our pull filters
 		if( true === $this->load_connection_parameters() ) {
 			$this->maybe_setup_taxonomies();
-			add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
-			add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+
+			$events_enabled = $this->get_option( 'events_enabled', 1 );
+			if ( 1 == $events_enabled ) {
+				add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
+			} elseif ( 2 == $events_enabled ) {
+				add_action( 'cp_connect_pull_events', [ $this, 'pull_registrations' ] );
+			}
+
+			if ( $this->get_option( 'groups_enabled', 1 ) ) {
+				add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
+			}
 		}
 
 		$this->setup_taxonomies( false );
@@ -53,24 +64,9 @@ class PCO extends ChMS {
 			}
 		}
 
-//		$raw = $this->api()
-//		            ->module( 'groups' )
-//		            ->table( 'groups' )
-//		            ->includes( 'group_type' )
-//		            ->per_page( 1 )
-//		            ->get();
-
-		// order=starts_at&filter=unarchived,published&fields[Event]=name,featured,logo_url,event_time,starts_at,ends_at,registration_state&per_page=100
 		$raw = $this->api()
-		            ->module( 'registrations' )
-		            ->table( 'events' )
-		            ->order( 'starts_at' )
-		            ->filter( 'unarchived,published' )
-		            ->parameterArray( [
-			            'fields[Event]' => 'name,featured,logo_url,event_time,starts_at,ends_at,registration_state'
-		            ] )
+		            ->module( 'groups' )
 		            ->get();
-
 
 		if( !empty( $this->api()->errorMessage() ) ) {
 			error_log( var_export( $this->api()->errorMessage(), true ) );
@@ -598,6 +594,263 @@ class PCO extends ChMS {
 	}
 
 	/**
+	 * Pull events from PCO Registrations
+	 *
+	 * @since  1.1.0
+	 *
+	 * @param $integration
+	 * @param $show_progress
+	 *
+	 * @return array|void
+	 * @throws \Exception
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function pull_registrations( $integration, $show_progress = false ) {
+		error_log( "PULL EVENTS STARTED " . date( 'Y-m-d H:i:s' ) );
+
+		$raw = $this->api()
+		            ->module( 'registrations' )
+		            ->table( 'events' )
+		            ->includes( 'categories,event_location,event_times' )
+		            ->order( 'starts_at' )
+		            ->filter( 'unarchived,published' )
+		            ->get();
+
+		if( !empty( $this->api()->errorMessage() ) ) {
+			error_log( var_export( $this->api()->errorMessage(), true ) );
+			return [];
+		}
+
+		// Give massaged data somewhere to go - the return variable
+		$formatted = [];
+
+		// Collapse and normalize the response
+		$items = [];
+		if( !empty( $raw ) && is_array( $raw ) && !empty( $raw['data'] ) && is_array( $raw['data'] ) ) {
+			$items = $raw['data'];
+		}
+
+		if( $show_progress ) {
+			$progress = \WP_CLI\Utils\make_progress_bar( "Importing " . count( $this->events['data'] ) . " events", count( $this->events['data'] ) );
+		}
+
+		$counter = 0;
+		// Iterate the received events for processing
+		foreach ( $items as $event ) {
+
+			if( $show_progress ) {
+				$progress->tick();
+			}
+
+			// Sanity check the event
+			$event_id = $event['id'] ?? 0;
+			if( empty( $event_id ) ) {
+				continue;
+			}
+
+			// Begin stuffing the output
+			$args = [
+				'chms_id'        => $event_id,
+				'post_status'    => 'publish',
+				'post_title'     => $event['attributes']['name'] ?? '',
+				'post_content'   => $event['attributes']['description'] ?? '',
+//				'post_excerpt'   => $event['attributes']['summary'] ?? '',
+				'tax_input'      => [],
+				'event_category' => [],
+				'thumbnail_url'  => '',
+				'meta_input'     => [
+					'registration_url' => $event['attributes']['public_url'] ?? '',
+				],
+//				'EventStartDate'        => $start_date->format( 'Y-m-d' ),
+//				'EventEndDate'          => $end_date->format( 'Y-m-d' ),
+//				'EventAllDay'           => true,
+//				'EventStartHour'        => $start_date->format( 'G' ),
+//				'EventStartMinute'      => $start_date->format( 'i' ),
+//				'EventStartMeridian'    => $event[''],
+//				'EventEndHour'          => $end_date->format( 'G' ),
+//				'EventEndMinute'        => $end_date->format( 'i' ),
+//				'EventEndMeridian'      => $event[''],
+//				'EventHideFromUpcoming' => $event[''],
+//				'EventShowMapLink'      => $event[''],
+//				'EventShowMap'          => $event[''],
+//				'EventCost'             => $event[''],
+//				'EventURL'              => $event[''],
+//				'FeaturedImage'         => $event['attributes']['image_url'] ?? '',
+			];
+
+
+			// handle event times
+			$times = $this->get_relationship_data( 'event_times', $event, $raw );
+
+			$start_date = $end_date = false;
+
+			if ( empty( $times[0] ) ) {
+				continue;
+			}
+
+			$times      = reset( $times );
+			$all_day    = boolval( $times['all_day'] );
+			$start_date = new \DateTime( $times['starts_at'] );
+			$start_date->setTimezone( wp_timezone() );
+
+			if ( ! empty( $times['ends_at'] ) ) {
+				$end_date   = new \DateTime( $times['ends_at'] );
+				$end_date->setTimezone( wp_timezone() );
+			} else {
+				$all_day = true;
+			}
+
+			$args['EventStartDate'] = $start_date->format( 'Y-m-d' );
+			$args['EventStartHour'] = $start_date->format( 'G' );
+			$args['EventStartMinute'] = $start_date->format( 'i' );
+
+			if ( $all_day ) {
+				$args['EventAllDay'] = true;
+			}
+
+			if ( $end_date ) {
+				$args['EventEndDate'] = $end_date->format( 'Y-m-d' );
+				$args['EventEndHour'] = $end_date->format( 'G' );
+				$args['EventEndMinute'] = $end_date->format( 'i' );
+			}
+
+			// Featured image
+			if ( ! empty( $event['attributes']['logo_url'] ) ) {
+				$args['thumbnail_url'] = $event['attributes']['logo_url'];
+			}
+
+			$categories = wp_list_pluck( $this->get_relationship_data( 'categories', $event, $raw ), 'name', 'slug' );
+
+			if ( ! empty( $categories ) ) {
+				$args['event_category'] = $categories;
+			}
+
+			$locations = $this->get_relationship_data( 'event_location', $event, $raw );
+
+			if ( ! empty( $locations ) ) {
+				$locations = reset( $locations );
+				$location  = $this->get_location_details( $locations );
+
+				if ( ! empty( $location['Venue'] ) ) {
+					$args['Venue'] = $location;
+				}
+			}
+
+			// Add the data to our output
+			$formatted[] = apply_filters( 'cp_connect_pco_event_args', $args, $event, $raw );
+
+		}
+
+		if( $show_progress ) {
+			$progress->finish();
+		}
+
+		error_log( "PULL EVENTS FINISHED " . date( 'Y-m-d H:i:s') );
+
+		$integration->process( $formatted );
+	}
+
+	/**
+	 * Pulls the relationship data from the included resources
+	 *
+	 * @since  1.1.0
+	 *
+	 * @param $object
+	 * @param $item
+	 * @param $data
+	 *
+	 * @return array
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	protected function get_relationship_data( $object, $item, $data ) {
+		if ( empty( $item['relationships'] )
+		     || empty( $item['relationships'][ $object ] )
+		     || empty( $item['relationships'][ $object ]['data'] )
+		     || empty( $data['included'] )
+		) {
+			return [];
+		}
+
+		$return = [];
+
+		if ( isset( $item['relationships'][ $object ]['data']['id'] ) ) {
+			$item['relationships'][ $object ]['data'] = [ $item['relationships'][ $object ]['data'] ];
+		}
+
+		foreach ( $item['relationships'][ $object ]['data'] as $relationship ) {
+			if ( empty( $relationship['type'] ) || empty( $relationship['id'] ) ) {
+				continue;
+			}
+
+
+			foreach ( $data['included'] as $include ) {
+				if ( $include['id'] == $relationship['id'] && $include['type'] == $relationship['type'] ) {
+					$return[] = $include['attributes'];
+				}
+			}
+		}
+
+		return $return;
+	}
+
+	/**
+	 * Get location details for provided location
+	 *
+	 * @since  1.1.0
+	 *
+	 * @param $location
+	 *
+	 * @return array
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	protected function get_location_details( $location_data ) {
+		if ( empty( $location_data['address_data'] ) || empty( $location_data['name'] ) ) {
+			return [];
+		}
+
+		$location = [
+			'Venue'   => $location_data['name'],
+			'Country' => '',
+			'Address' => '',
+			'City'    => '',
+			'State'   => '',
+			'Zip'     => '',
+		];
+
+		foreach( $location_data['address_data'] as $part ) {
+			if ( empty( $part['types'] ) ) {
+				continue;
+			}
+
+			if ( in_array( 'street_number', $part['types'] ) ) {
+				$location['Address'] = $part['long_name'] . $location['Address'];
+			}
+
+			if ( in_array( 'route', $part['types'] ) ) {
+				$location['Address'] .= $part['long_name'];
+			}
+
+			if ( in_array( 'locality', $part['types'] ) ) {
+				$location['City'] = $part['long_name'];
+			}
+
+			if ( in_array( 'administrative_area_level_1', $part['types'] ) ) {
+				$location['State'] = $part['long_name'];
+			}
+
+			if ( in_array( 'country', $part['types'] ) ) {
+				$location['Country'] = $part['long_name'];
+			}
+
+			if ( in_array( 'postal_code', $part['types'] ) ) {
+				$location['Zip'] = $part['long_name'];
+			}
+		}
+
+		return $location;
+	}
+
+	/**
 	 * Pull details about a specific group from PCO
 	 *
 	 * @param int $group_id
@@ -778,6 +1031,58 @@ class PCO extends ChMS {
 			'id'   => 'pco_secret',
 			'type' => 'text',
 		] );
+	}
+
+	/**
+	 * Add PCO Settings Tab
+	 *
+	 * @since  1.1.0
+	 *
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function api_settings_tab() {
+		$args = array(
+			'id'           => 'cpc_pco_page',
+			'title'        => 'PCO Settings',
+			'object_types' => array( 'options-page' ),
+			'option_key'   => $this->settings_key,
+			'parent_slug'  => 'cpc_main_options',
+			'tab_group'    => 'cpc_main_options',
+			'tab_title'    => 'Settings',
+			'display_cb'   => [ $this, 'options_display_with_tabs' ]
+		);
+
+		$settings = new_cmb2_box( $args );
+
+		$settings->add_field( [
+			'name' => 'PCO Data Settings',
+			'id'   => 'pco_data_title',
+			'desc' => __( 'The following settings control how data is retrieved from Planning Center Online.', 'cp-connect' ),
+			'type' => 'title',
+		] );
+
+		$settings->add_field( array(
+			'name'    => __( 'Enable Events' ),
+			'id'      => 'events_enabled',
+			'type'    => 'radio_inline',
+			'default' => 1,
+			'options' => [
+				1 => __( 'Pull from Calendar', 'cp-library' ),
+				2 => __( 'Pull from Registrations (beta)', 'cp-library' ),
+				0 => __( 'Do not pull', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
+			'name'    => __( 'Enable Groups' ),
+			'id'      => 'groups_enabled',
+			'type'    => 'radio_inline',
+			'default' => 1,
+			'options' => [
+				1 => __( 'Pull from Groups', 'cp-library' ),
+				0 => __( 'Do not pull', 'cp-library' ),
+			]
+		) );
 	}
 
 	/**

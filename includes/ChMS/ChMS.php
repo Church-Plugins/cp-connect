@@ -21,6 +21,12 @@ abstract class ChMS {
 	public $label;
 
 	/**
+	 * @var string | Settings key for this integration
+	 */
+	public $settings_key = '';
+
+
+	/**
 	 * Only make one instance of PostType
 	 *
 	 * @return self
@@ -38,6 +44,7 @@ abstract class ChMS {
 	protected function __construct() {
 		add_action( 'init', [ $this, 'integrations' ], 500 );
 		add_action( 'cpc_main_options_metabox', [ $this, 'api_settings' ] );
+		add_action( 'cpc_main_options_tabs', [ $this, 'api_settings_tab' ] );
 		add_action( 'cmb2_save_options-page_fields_cpc_main_options_page', [ $this, 'maybe_add_connection_message' ] );
 
 		if ( Settings::get( 'pull_now' ) ) {
@@ -49,6 +56,25 @@ abstract class ChMS {
 		echo '<div class="notice notice-success is-dismissible">
              <p>Processing pull request.</p>
          </div>';
+	}
+
+	/**
+	 * Add the API settings from the ChMS tab
+	 *
+	 * @since  1.1.0
+	 *
+	 * @param $key
+	 * @param $default
+	 *
+	 * @return mixed|string|void
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function get_option( $key, $default = '' ) {
+		if ( empty( $this->settings_key ) ) {
+			return '';
+		}
+
+		return Settings::get( $key, $default, $this->settings_key );
 	}
 
 	/**
@@ -105,13 +131,22 @@ abstract class ChMS {
 	/**
 	 * Register the settings fields
 	 *
-	 * @since  1.0.4
+	 * @since  1.1.0
 	 *
 	 * @param $cmb2 \CMB2 object
 	 *
 	 * @author Tanner Moushey, 11/30/23
 	 */
 	abstract function api_settings( $cmb2 );
+
+	/**
+	 * Register the settings tab
+	 *
+	 * @since  1.1.0
+	 *
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function api_settings_tab() {}
 
 	/**
 	 * Check the connection to the ChMS

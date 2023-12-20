@@ -126,6 +126,8 @@ class Settings {
 			'desc'    => __( 'Check this box to pull data from your ChMS now.', 'cp-connect' ),
 		) );
 
+		do_action( 'cpc_main_options_tabs' );
+
 		$this->license_fields();
 
 	}
