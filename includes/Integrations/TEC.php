@@ -12,6 +12,10 @@ class TEC extends Integration {
 
 	public $label = 'Events';
 
+	public function actions() {
+		add_action( 'tribe_events_single_event_before_the_content', [ $this, 'maybe_add_registration_button'] );
+	}
+
 	public function update_item( $item ) {
 
 		if ( $id = $this->get_chms_item_id( $item['chms_id'] ) ) {
@@ -55,6 +59,48 @@ class TEC extends Integration {
 		wp_set_post_terms( $id, $categories, 'tribe_events_cat' );
 
 		return $id;
+	}
+
+	public function maybe_add_registration_button() {
+
+		if ( ! apply_filters( 'cp_connect_show_event_registration_button', false, get_the_ID() ) ) {
+			return;
+		}
+
+		if ( ! $registration_url = get_post_meta( get_the_ID(), 'registration_url', true ) ) {
+			return;
+		}
+
+		$button_text = __( 'Register', 'cp-connect' );
+		$button_class = 'tribe-common-c-btn';
+
+		if ( get_post_meta( get_the_ID(), 'registration_sold_out', true ) ) {
+			$button_text = __( 'Sold Out', 'cp-connect' );
+			$button_class .= ' disabled';
+		}
+
+		?>
+		<div class="tribe-common cp-connect--register-cont">
+			<a href="<?php echo esc_url( $registration_url ); ?>" class="<?php echo esc_attr( $button_class ); ?>"><?php echo esc_html( $button_text ); ?></a>
+		</div>
+
+		<style>
+			.cp-connect--register-cont {
+				margin-bottom: var(--tec-spacer-7);
+				text-align: right;
+			}
+
+			.tribe-common.cp-connect--register-cont .tribe-common-c-btn {
+				width: auto;
+			}
+
+			.cp-connect--register-cont .disabled {
+				opacity: 0.5;
+				pointer-events: none;
+				cursor: default;
+			}
+		</style>
+		<?php
 	}
 
 }

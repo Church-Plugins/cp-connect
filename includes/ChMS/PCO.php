@@ -53,6 +53,7 @@ class PCO extends ChMS {
 		$this->setup_taxonomies( false );
 
 		add_action( 'cp_tec_update_item_after', [ $this, 'event_taxonomies' ], 10, 2 );
+		add_filter( 'cp_connect_show_event_registration_button', [ $this, 'show_event_registration_button' ] );
 	}
 
 	public function check_connection() {
@@ -679,7 +680,7 @@ class PCO extends ChMS {
 			];
 
 			if ( 'none' !== $event['attributes']['registration_type'] ) {
-				$args['meta_input']['registration_url'] = trailingslashit( $event['attributes']['registration_url'] ) . 'reservations/new/';
+				$args['meta_input']['registration_url'] = trailingslashit( $event['attributes']['public_url'] ) . 'reservations/new/';
 				$args['meta_input']['registration_sold_out'] = false;
 
 				if ( ! empty( $event['attributes']['at_maximum_capacity'] ) ) {
@@ -1082,6 +1083,17 @@ class PCO extends ChMS {
 		) );
 
 		$settings->add_field( array(
+			'name'    => __( 'Event Register Button' ),
+			'id'      => 'events_register_button_enabled',
+			'type'    => 'radio_inline',
+			'default' => 0,
+			'options' => [
+				1 => __( 'Show', 'cp-library' ),
+				0 => __( 'Hide', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
 			'name'    => __( 'Enable Groups' ),
 			'id'      => 'groups_enabled',
 			'type'    => 'radio_inline',
@@ -1157,6 +1169,20 @@ class PCO extends ChMS {
 		}
 
 		return $in_tax;
+	}
+
+	/**
+	 * Whether or not to show the event registration button
+	 *
+	 * @since  1.1.0
+	 *
+	 * @param $show
+	 *
+	 * @return mixed|string|void
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function show_event_registration_button( $show = false ) {
+		return $this->get_option( 'events_register_button_enabled', $show );
 	}
 
 }

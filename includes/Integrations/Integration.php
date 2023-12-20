@@ -26,20 +26,30 @@ abstract class Integration extends \WP_Background_Process {
 	public function __construct() {
 		$this->action = 'pull_' . $this->type;
 
+		$this->actions();
 		parent::__construct();
 	}
+
+	/**
+	 * Might need to do something in an integration
+	 *
+	 * @since  1.1.0
+	 *
+	 * @author Tanner Moushey, 12/20/23
+	 */
+	public function actions() {}
 
 	/**
 	 * Pull the content from the ChMS which should hook in through the filter.
 	 *
 	 * @since  1.0.0
 	 *
-	 * @author Tanner Moushey 
+	 * @author Tanner Moushey
 	 */
 	public function process( $items ) {
 
 		$items = apply_filters( 'cp_connect_process_items', $items, $this );
-		
+
 		$item_store = $this->get_store();
 
 		foreach( $items as $item ) {
@@ -49,7 +59,7 @@ abstract class Integration extends \WP_Background_Process {
 			if ( apply_filters( 'cp_connect_process_hard_refresh', false, $items, $this ) ) {
 				$item[ md5( time() ) ] = time();
 			}
-			
+
 			// check if any of the provided values have changed
 			if ( $this->create_store_key( $item ) !== $store ) {
 				$this->push_to_queue( apply_filters( "cp_connect_{$this->type}_item", $item, $this ) );
@@ -63,13 +73,13 @@ abstract class Integration extends \WP_Background_Process {
 		}
 
 		$this->update_store( $items );
-		
+
 		$this->save()->dispatch();
 	}
 
 	/**
 	 * The task for handling individual item updates
-	 * 
+	 *
 	 * @param $item
 	 *
 	 * @return mixed|void
@@ -78,7 +88,7 @@ abstract class Integration extends \WP_Background_Process {
 	 * @author Tanner Moushey
 	 */
 	public function task( $item ) {
-		
+
 		try {
 			$id = $this->update_item( $item );
 		} catch ( Exception $e ) {
@@ -86,7 +96,7 @@ abstract class Integration extends \WP_Background_Process {
 			error_log( $e );
 			return false;
 		}
-		
+
 		$this->maybe_sideload_thumb( $item, $id );
 		$this->maybe_update_location( $item, $id );
 
@@ -97,12 +107,12 @@ abstract class Integration extends \WP_Background_Process {
 		if ( ! empty( $item['chms_id'] ) ) {
 			update_post_meta( $id, '_chms_id', $item['chms_id'] );
 		}
-		
+
 		do_action( 'cp_update_item_after', $item, $id, $this );
 		do_action( 'cp_' . $this->id . '_update_item_after', $item, $id );
 		return false;
 	}
-	
+
 	protected function complete() {
 		parent::complete();
 	}
@@ -122,7 +132,7 @@ abstract class Integration extends \WP_Background_Process {
 
 	/**
 	 * Import item thumbnail
-	 * 
+	 *
 	 * @param $item
 	 * @param $id
 	 *
@@ -134,7 +144,7 @@ abstract class Integration extends \WP_Background_Process {
 		require_once( ABSPATH . 'wp-admin/includes/media.php' );
 		require_once( ABSPATH . 'wp-admin/includes/file.php' );
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
-		
+
 		// import the image and set as the thumbnail
 		if ( ! empty( $item['thumbnail_url'] ) && get_post_meta( $id, '_thumbnail_url', true ) !== $item['thumbnail_url'] ) {
 			$thumb_id = media_sideload_image( $item['thumbnail_url'], $id, $item['post_title'] . ' Thumbnail', 'id' );
@@ -158,7 +168,7 @@ abstract class Integration extends \WP_Background_Process {
 		if ( ! taxonomy_exists( 'cp_location' ) ) {
 			return;
 		}
-		
+
 		$location = empty( $item['cp_location'] ) ? false : $item['cp_location'];
 		wp_set_post_terms( $id, $location, 'cp_location' );
 	}
@@ -174,11 +184,11 @@ abstract class Integration extends \WP_Background_Process {
 	 */
 	public function remove_item( $chms_id ) {
 		$id = $this->get_chms_item_id( $chms_id );
-		
+
 		if ( $thumb = get_post_thumbnail_id( $id ) ) {
 			wp_delete_attachment( $thumb, true );
 		}
-		
+
 		wp_delete_post( $id, true );
 	}
 

@@ -53,7 +53,15 @@ class _Init {
 	 * @return void
 	 */
 	protected function includes() {
-		$integrations = [ 'tec' => '\CP_Connect\Integrations\TEC', 'cp_groups' => '\CP_Connect\Integrations\CP_Groups' ];
+		$integrations = [];
+
+		if ( function_exists( 'cp_groups' ) ) {
+			$integrations[ 'cp_groups' ] = '\CP_Connect\Integrations\CP_Groups';
+		}
+
+		if ( defined( 'TRIBE_EVENTS_FILE' ) ) {
+			$integrations[ 'tec' ] = '\CP_Connect\Integrations\TEC';
+		}
 
 		foreach( $integrations as $key => $integration ) {
 			if ( ! class_exists( $integration ) ) {
