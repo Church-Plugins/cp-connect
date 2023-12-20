@@ -40,7 +40,7 @@ class _Init {
 	 *
 	 */
 	protected function __construct() {
-		$this->enqueue = new \WPackio\Enqueue( 'cpStaff', 'dist', $this->get_version(), 'plugin', CP_CONNECT_PLUGIN_FILE );
+		$this->enqueue = new \WPackio\Enqueue( 'cpConnect', 'dist', $this->get_version(), 'plugin', CP_CONNECT_PLUGIN_FILE );
 		add_action( 'plugins_loaded', [ $this, 'maybe_setup' ], - 9999 );
 		add_action( 'init', [ $this, 'maybe_init' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'admin_enqueue' ] );
@@ -96,15 +96,14 @@ class _Init {
 	 * @return void
 	 */
 	protected function includes() {
-		require_once( 'Templates.php' );
 		Admin\_Init::get_instance();
 		ChMS\_Init::get_instance();
 		Integrations\_Init::get_instance();
 		$this->setup = Setup\_Init::get_instance();
 	}
-	
+
 	protected function actions() {}
-	
+
 	/**
 	 * Required Plugins notice
 	 *

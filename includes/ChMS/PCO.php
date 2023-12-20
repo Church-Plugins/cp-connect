@@ -659,7 +659,7 @@ class PCO extends ChMS {
 				'event_category' => [],
 				'thumbnail_url'  => '',
 				'meta_input'     => [
-					'registration_url' => $event['attributes']['public_url'] ?? '',
+					'registration_url' => '',
 				],
 //				'EventStartDate'        => $start_date->format( 'Y-m-d' ),
 //				'EventEndDate'          => $end_date->format( 'Y-m-d' ),
@@ -678,6 +678,14 @@ class PCO extends ChMS {
 //				'FeaturedImage'         => $event['attributes']['image_url'] ?? '',
 			];
 
+			if ( 'none' !== $event['attributes']['registration_type'] ) {
+				$args['meta_input']['registration_url'] = trailingslashit( $event['attributes']['registration_url'] ) . 'reservations/new/';
+				$args['meta_input']['registration_sold_out'] = false;
+
+				if ( ! empty( $event['attributes']['at_maximum_capacity'] ) ) {
+					$args['meta_input']['registration_sold_out'] = true;
+				}
+			}
 
 			// handle event times
 			$times = $this->get_relationship_data( 'event_times', $event, $raw );
