@@ -2,6 +2,8 @@
 
 namespace CP_Connect\ChMS;
 
+use CP_Connect\Admin\Settings;
+
 require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/cli/PCO.php" );
 require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/ccb-api/ccb-api.php" );
 
@@ -37,7 +39,7 @@ class _Init {
 	}
 
 	protected function actions() {
-		add_action( 'init', [ $this, 'includes' ] );
+		add_action( 'init', [ $this, 'includes' ], 5 );
 	}
 
 	/** Actions ***************************************************/
@@ -48,7 +50,7 @@ class _Init {
 	 * @return void
 	 */
 	public function includes() {
-		$active_chms = apply_filters( 'cp_connect_active_chms', 'mp' );
+		$active_chms = $this->get_active_chms();
 
 		switch( $active_chms ) {
 			case 'mp':
@@ -61,6 +63,10 @@ class _Init {
 				$ccb = ChurchCommunityBuilder::get_instance();
 				break;
 		}
+	}
+
+	public function get_active_chms() {
+		return apply_filters( 'cp_connect_active_chms', Settings::get( 'chms' ) );
 	}
 
 }

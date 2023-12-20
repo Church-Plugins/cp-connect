@@ -1,11 +1,16 @@
 <?php
 
 namespace ChurchCommunityBuilderAPI;
+
+use CP_Connect\Admin\Settings;
+
 /**
  * Church Community Builder Connection
  *
- * @package     CCBPress_Core
- * @copyright   Copyright (c) 2015, FireTree Design, LLC
+ * Forked from CCBPress
+ *
+ * @package     CP_Connect
+ * @copyright   Copyright (c) 2023, Church Plugins
  * @license     http://opensource.org/licenses/gpl-2.0.php GNU Public License
  * @since       1.0.0
  */
@@ -16,11 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * CCBPress_Connection class
+ * API class
  *
  * @since 1.0.0
  */
-class CCBPress_Connection {
+class API {
 
 	/**
 	 * API Protocol
@@ -90,16 +95,16 @@ class CCBPress_Connection {
 	 */
 	function __construct() {
 
-		$ccbpress_ccb = get_option( 'ccb_plugin_options' );
+		$cpc_ccb = $this->get_options();
 
 		$api_user = '';
-		if ( isset( $ccbpress_ccb['api_user'] ) ) {
-			$api_user = $ccbpress_ccb['api_user'];
+		if ( isset( $cpc_ccb['api_user'] ) ) {
+			$api_user = $cpc_ccb['api_user'];
 		}
 
 		$api_pass = '';
-		if ( isset( $ccbpress_ccb['api_pass'] ) ) {
-			$api_pass = $ccbpress_ccb['api_pass'];
+		if ( isset( $cpc_ccb['api_pass'] ) ) {
+			$api_pass = $cpc_ccb['api_pass'];
 		}
 
 		$this->api_url				= $this->get_base_url( 'api.php' );
@@ -109,6 +114,17 @@ class CCBPress_Connection {
 		$this->test_srv				= 'api_status';
 		$this->image_cache_dir		= 'cp-connect/ccb';
 
+	}
+
+	public function get_options() {
+		// legacy
+		$cpc_ccb = get_option( 'ccb_plugin_options', [] );
+
+		if ( empty( $cpc_ccb ) ) {
+			$cpc_ccb = get_option( 'cpc_main_options', [] );
+		}
+
+		return $cpc_ccb;
 	}
 
 	/**
@@ -127,10 +143,7 @@ class CCBPress_Connection {
 	 *
 	 * @return void
 	 */
-	public function actions() {
-		add_action( 'ccbpress_after_get_group_profile_from_id', array( $this, 'cache_image_group_profile_from_id' ), 10, 2 );
-		add_action( 'ccbpress_after_get_individual_profile_from_id', array( $this, 'cache_image_individual_profile_from_id' ), 10, 2 );
-	}
+	public function actions() {}
 
 	/**
 	 * Test if we are connected to Church Community Builder
@@ -140,8 +153,8 @@ class CCBPress_Connection {
 	 * @return boolean Answer
 	 */
 	public function is_connected() {
-		$ccbpress_ccb = get_option( 'ccb_plugin_options', array() );
-		if ( isset( $ccbpress_ccb['connection_test'] ) && 'success' === $ccbpress_ccb['connection_test'] ) {
+		$cpc_ccb = $this->get_options();
+		if ( isset( $cpc_ccb['connection_test'] ) && 'success' === $cpc_ccb['connection_test'] ) {
 			return true;
 		}
 		return false;
@@ -157,11 +170,11 @@ class CCBPress_Connection {
 	 * @author Tanner Moushey, 4/18/23
 	 */
 	public function get_base_url( $path = '' ) {
-		$ccbpress_ccb = get_option( 'ccb_plugin_options' );
+		$cpc_ccb = $this->get_options();
 
 		$api_prefix = '';
-		if ( isset( $ccbpress_ccb['api_prefix'] ) ) {
-			$api_prefix = $ccbpress_ccb['api_prefix'];
+		if ( isset( $cpc_ccb['api_prefix'] ) ) {
+			$api_prefix = $cpc_ccb['api_prefix'];
 		}
 
 		$url = $this->api_protocol . $api_prefix . '.ccbchurch.com';
@@ -236,7 +249,7 @@ class CCBPress_Connection {
 
 		// Check the transient cache if the cache is not set to 0.
 		if ( $new_args['cache_lifespan'] > 0 && 0 === $new_args['refresh_cache'] ) {
-			$ccb_data = $this->get_transient( $transient_name, 'ccbpress_schedule_get', $new_args );
+			$ccb_data = $this->get_transient( $transient_name, 'cpc_schedule_get', $new_args );
 		}
 
 		// Check for a cached copy in the transient data.
@@ -293,7 +306,7 @@ class CCBPress_Connection {
 		unset( $ccb_data_raw );
 
 		if ( true === $new_args['validate_data'] ) {
-			do_action( "ccbpress_after_get_{$srv}", $ccb_data, $new_args );
+			do_action( "cpc_after_get_{$srv}", $ccb_data, $new_args );
 		}
 
 		return $ccb_data;
@@ -350,7 +363,7 @@ class CCBPress_Connection {
 			}
 
 			$srv = strtolower( $args['query_string']['srv'] );
-			do_action( "ccbpress_after_post_{$srv}", $ccb_data, $args );
+			do_action( "cpc_after_post_{$srv}", $ccb_data, $args );
 
 			return $ccb_data;
 
@@ -368,23 +381,23 @@ class CCBPress_Connection {
 	 * @return boolean
 	 */
 	public function rate_limit_ok( $srv ) {
-		$ccbpress_rate_limits = get_option( 'ccbpress_rate_limits', array() );
+		$cpc_rate_limits = get_option( 'cpc_rate_limits', array() );
 
 		// Return true if the service has not been requested before
-		if ( ! isset( $ccbpress_rate_limits[ $srv ] ) ) {
+		if ( ! isset( $cpc_rate_limits[ $srv ] ) ) {
 			return true;
 		}
 
-		if ( isset( $ccbpress_rate_limits[ $srv ]['limit'] ) && isset( $ccbpress_rate_limits[ $srv ]['remaining'] ) ) {
-			$limit = intval($ccbpress_rate_limits[ $srv ]['limit']);
-			$remaining = intval($ccbpress_rate_limits[ $srv ]['remaining']);
+		if ( isset( $cpc_rate_limits[ $srv ]['limit'] ) && isset( $cpc_rate_limits[ $srv ]['remaining'] ) ) {
+			$limit = intval($cpc_rate_limits[ $srv ]['limit']);
+			$remaining = intval($cpc_rate_limits[ $srv ]['remaining']);
 			if ($remaining >= ($limit / 2)) {
 				return true;
 			}
 		}
 
-		if ( isset( $ccbpress_rate_limits[ $srv ]['reset'] ) ) {
-			$reset = intval($ccbpress_rate_limits[ $srv ]['reset']);
+		if ( isset( $cpc_rate_limits[ $srv ]['reset'] ) ) {
+			$reset = intval($cpc_rate_limits[ $srv ]['reset']);
 			if ( time() >= $reset ) {
 				return true;
 			} else {
@@ -405,16 +418,16 @@ class CCBPress_Connection {
 		$ratelimit_reset     = wp_remote_retrieve_header( $response, 'x-ratelimit-reset' );
 		$retry_after         = wp_remote_retrieve_header( $response, 'retry-after' );
 
-		$ccbpress_rate_limits = get_option( 'ccbpress_rate_limits', array() );
+		$cpc_rate_limits = get_option( 'cpc_rate_limits', array() );
 
-		$ccbpress_rate_limits[ $srv ] = array(
+		$cpc_rate_limits[ $srv ] = array(
 			'limit'	=> $ratelimit_limit,
 			'remaining' => $ratelimit_remaining,
 			'reset' => $ratelimit_reset,
 			'retry_after' => $retry_after
 		);
 
-		update_option( 'ccbpress_rate_limits', $ccbpress_rate_limits );
+		update_option( 'cpc_rate_limits', $cpc_rate_limits );
 	}
 
 	/**
@@ -450,6 +463,10 @@ class CCBPress_Connection {
 
 			if ( ! is_wp_error( $response ) ) {
 
+				if ( $response['response']['code'] == 404 ) {
+					return __( 'API Prefix is incorrect.', 'cp-connect' );
+				}
+
 				// Grab the body from the response.
 				$ccb_data = wp_remote_retrieve_body( $response );
 
@@ -470,7 +487,7 @@ class CCBPress_Connection {
 				}
 
 				if ( 'not_set' === $the_response ) {
-					$the_response = esc_html__( 'The API URL appears to be incorrect', 'ccbpress-core' );
+					$the_response = esc_html__( 'The API URL appears to be incorrect', 'cp-connect-core' );
 				}
 
 				// Free up the memory.
@@ -480,7 +497,7 @@ class CCBPress_Connection {
 				$the_response = $response->get_error_message();
 			}
 		} catch ( Exception $e ) {
-			$the_response = esc_html__( 'Bad connection information', 'ccbpress-core' );
+			$the_response = esc_html__( 'Bad connection information', 'cp-connect-core' );
 		}
 
 		// Return the response.
@@ -500,7 +517,7 @@ class CCBPress_Connection {
 	public function test_connection( $api_prefix, $api_user, $api_pass ) {
 
 		if ( '' === trim( $api_prefix ) ) {
-			$message = esc_html__( 'Your CCB Website must not be blank.', 'ccbpress-core' );
+			$message = esc_html__( 'Your CCB Website must not be blank.', 'cp-connect-core' );
 			add_settings_error(
 				'api_url',
 				esc_attr( 'settings_updated' ),
@@ -529,7 +546,7 @@ class CCBPress_Connection {
 
 		switch ( $message ) {
 			case 'success':
-				$new_message = esc_html__( 'Successfully connected to Church Community Builder. Please check your API Services below.', 'ccbpress-core' );
+				$new_message = esc_html__( 'Successfully connected to Church Community Builder. Please check your API Services below.', 'cp-connect-core' );
 				$type = 'updated';
 				break;
 			default:
@@ -547,7 +564,7 @@ class CCBPress_Connection {
 
 		return $message;
 
-	} // ccbpress_connection_test
+	} // cpc_connection_test
 
 	/**
 	 * Return the default cache lifespan for a service.
@@ -559,12 +576,12 @@ class CCBPress_Connection {
 	public function cache_lifespan( $srv ) {
 
 		// Add the services to this filter that your add-on uses.
-		$services = apply_filters( 'ccbpress_ccb_services', array() );
+		$services = apply_filters( 'cpc_ccb_services', array() );
 
 		foreach ( $services as $service ) {
 			if ( $service === $srv ) {
 				// Add a filter here if you want to change the default lifespan of 60 minutes.
-				return apply_filters( 'ccbpress_cache_' . $service, 60 );
+				return apply_filters( 'cpc_cache_' . $service, 60 );
 			}
 		}
 

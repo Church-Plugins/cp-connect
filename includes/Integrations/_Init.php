@@ -2,6 +2,8 @@
 
 namespace CP_Connect\Integrations;
 
+use CP_Connect\Admin\Settings;
+
 /**
  * Setup integration initialization
  */
@@ -84,8 +86,6 @@ class _Init {
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ], 999 );
 		add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
-
-		// add_action( 'init', [ $this, 'pull_content' ], 9999 );
 	}
 
 	/** Actions ***************************************************/
@@ -111,9 +111,10 @@ class _Init {
 	 * @author Tanner Moushey
 	 */
 	public function schedule_cron() {
-		if ( is_admin() && isset( $_REQUEST['cp-connect-pull'] ) ) {
-			add_filter( 'cp_connect_process_hard_refresh', '__return_true' );
-			do_action( self::$_cron_hook );
+		if ( is_admin() && Settings::get( 'pull_now' ) ) {
+			Settings::set( 'pull_now', '' );
+//			add_filter( 'cp_connect_process_hard_refresh', '__return_true' );
+//			do_action( self::$_cron_hook );
 		}
 
 		if ( wp_next_scheduled( self::$_cron_hook ) ) {

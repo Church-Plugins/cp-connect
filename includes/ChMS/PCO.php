@@ -2,6 +2,7 @@
 
 namespace CP_Connect\ChMS;
 
+use CP_Connect\Admin\Settings;
 use PlanningCenterAPI\PlanningCenterAPI as PlanningCenterAPI;
 
 /**
@@ -39,9 +40,52 @@ class PCO extends ChMS {
 		}
 
 		$this->setup_taxonomies( false );
-		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
-		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
+
 		add_action( 'cp_tec_update_item_after', [ $this, 'event_taxonomies' ], 10, 2 );
+	}
+
+	public function check_connection() {
+
+		// make sure we have all required parameters
+		foreach( [ 'pco_app_id', 'pco_secret' ] as $option ) {
+			if ( ! Settings::get( $option ) ) {
+				return false;
+			}
+		}
+
+//		$raw = $this->api()
+//		            ->module( 'groups' )
+//		            ->table( 'groups' )
+//		            ->includes( 'group_type' )
+//		            ->per_page( 1 )
+//		            ->get();
+
+		// order=starts_at&filter=unarchived,published&fields[Event]=name,featured,logo_url,event_time,starts_at,ends_at,registration_state&per_page=100
+		$raw = $this->api()
+		            ->module( 'registrations' )
+		            ->table( 'events' )
+		            ->order( 'starts_at' )
+		            ->filter( 'unarchived,published' )
+		            ->parameterArray( [
+			            'fields[Event]' => 'name,featured,logo_url,event_time,starts_at,ends_at,registration_state'
+		            ] )
+		            ->get();
+
+
+		if( !empty( $this->api()->errorMessage() ) ) {
+			error_log( var_export( $this->api()->errorMessage(), true ) );
+
+			return [
+				'status'  => 'failed',
+				'message' => $this->api()->errorMessage()['errors'][0]['detail'],
+			];
+		}
+
+		return [
+			'status'  => 'success',
+			'message' => __( 'Connection successful', 'cp-connect' ),
+		];
+
 	}
 
 	public function event_taxonomies( $item, $id ) {
@@ -88,36 +132,10 @@ class PCO extends ChMS {
 	 * @author costmo
 	 */
 	private function maybe_setup_taxonomies() {
-
-		global $wpdb;
-
-		// Search for the existence of a single taxonomy to determine if we've already done this
-		$test_tax = 'ministry_leader';
-		$have_data = false;
-
-
-		// This function hits before the 'Init' hook, so `taxonomy_exists()` will
-		//    always return false. Direct query required.
-		$prepared = $wpdb->prepare(
-			"SELECT		COUNT(*) as count
-			 FROM		" . $wpdb->prefix . "term_taxonomy
-			 WHERE		taxonomy = %s",
-			 $test_tax
-		);
-		$results = $wpdb->get_results( $prepared );
-		if( !empty( $results ) && is_array( $results ) ) {
-			foreach( $results as $row ) {
-				if( $row && is_object( $row ) && !empty( $row->count ) ) {
-					$have_data = true;
-				}
-			}
-		}
-
 		// We have no data, populate it now
-		if( !$have_data ) {
+		if( get_option( 'cp_pco_event_taxonomies', false ) === false ) {
 			$this->setup_taxonomies( true );
 		}
-		return;
 	}
 
 	/**
@@ -132,13 +150,13 @@ class PCO extends ChMS {
 
 		// Do not query the remote source on every page load
 		// TODO: This needs to be more dynamic, but less heavy
-		$taxonomies = [
+		$taxonomies = apply_filters( 'cp_pco_event_taxonomies', get_option( 'cp_pco_event_taxonomies', [
 			'Campus' 			=> false,
 			'Ministry Group' 	=> false,
 			'Event Type' 		=> false,
 			'Frequency' 		=> false,
 			'Ministry Leader' 	=> false
-		];
+		] ) );
 
 		if( $add_data ) {
 			$raw_groups =
@@ -183,6 +201,8 @@ class PCO extends ChMS {
 						$output[ $group_name ][] = $tag_data['attributes']['name'];
 					}
 				}
+
+				update_option( 'cp_pco_event_taxonomies', $output );
 			}
 		}
 
@@ -713,202 +733,70 @@ class PCO extends ChMS {
 	}
 
 	/**
-	 * This function introduces a single plugin menu option into the WordPress 'Plugins'
-	 * menu.
-	 */
-	function plugin_menu() {
-
-		add_submenu_page( 'options-general.php',
-			'Planning Center Online Integration',         // The title to be displayed in the browser window for this page.
-			'PCO',                        // The text to be displayed for this menu item
-			'administrator',                    // Which type of users can see this menu item
-			'pco_plugin_options', // The unique ID - that is, the slug - for this menu item
-			[ $this, 'plugin_display' ]  // The name of the function to call when rendering the page for this menu
-		);
-
-	} // end sandbox_example_theme_menu
-
-	/**
-	 * Renders a simple page to display for the plugin menu defined above.
-	 */
-	function plugin_display() {
-		?>
-		<!-- Create a header in the default WordPress 'wrap' container -->
-		<div class="wrap">
-			<!-- Add the icon to the page -->
-			<div id="icon-themes" class="icon32"></div>
-			<h2>Planning Center Online Plugin Options</h2>
-			<p class="description">Here you can set the parameters to authenticate to and use the Planning Center Online
-				API</p>
-
-			<!-- Make a call to the WordPress function for rendering errors when settings are saved. -->
-			<?php settings_errors(); ?>
-
-			<!-- Create the form that will be used to render our options -->
-			<form method="post" action="options.php">
-				<?php settings_fields( 'pco_plugin_options' ); ?>
-				<?php do_settings_sections( 'pco_plugin_options' ); ?>
-				<p class="submit">
-					<?php submit_button( null, 'primary', 'submit', false ); ?>
-					<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
-				</p>
-			</form>
-		</div> <!-- /.wrap -->
-
-		<?php
-	} // end sandbox_plugin_display
-
-
-	/**
-	 * Setup WP admin settings fields
+	 * Register the settings fields
 	 *
-	 * @return void
-	 * @author costmo
-	 */
-	function initialize_plugin_options() {
-
-		// If the options don't exist, add them
-		if ( false == get_option( 'pco_plugin_options' ) ) {
-			add_option( 'pco_plugin_options' );
-		} // end if
-
-
-		// First, we register a section. This is necessary since all future options must belong to one.
-		add_settings_section(
-			'pco_settings_section',                           // ID used to identify this section and with which to register options
-			'API Configuration Options',                                  // Title to be displayed on the administration page
-			[ $this, 'general_options_callback' ],  // Callback used to render the description of the section
-			'pco_plugin_options'                              // Page on which to add this section of options
-		);
-
-		// Next, we will introduce the fields for the configuration information.
-		add_settings_field(
-			'PCO_APPLICATION_ID',                                  // ID used to identify the field throughout the theme
-			'Application ID',                                     // The label to the left of the option interface element
-			[ $this, 'pco_app_id_callback' ],        // The name of the function responsible for rendering the option interface
-			'pco_plugin_options',                 // The page on which this option will be displayed
-			'pco_settings_section',               // The name of the section to which this field belongs
-			[                                                   // The array of arguments to pass to the callback. In this case, just a description.
-			    'The <strong>Application ID</strong> for a Personal Access Token'
-			]
-		);
-
-		add_settings_field(
-			'PCO_SECRET',                                  // ID used to identify the field throughout the theme
-			'Application Secret',                                     // The label to the left of the option interface element
-			[ $this, 'pco_app_secret_callback' ],        // The name of the function responsible for rendering the option interface
-			'pco_plugin_options',                 // The page on which this option will be displayed
-			'pco_settings_section',               // The name of the section to which this field belongs
-			[                                                   // The array of arguments to pass to the callback. In this case, just a description.
-			    'The <strong>Secret</strong> for your Personal Access Token'
-			]
-		);
-
-		// Finally, we register the fields with WordPress
-		register_setting(
-			'pco_plugin_options',
-			'pco_plugin_options'
-		);
-
-
-	} // end ministry_platform_initialize_plugin_options
-
-	/**
-	 * Admin info string
+	 * @since  1.0.5
 	 *
-	 * @return void
-	 * @author costmo
-	 */
-	function general_options_callback() {
-		echo '<p>The following parameters are required to authenticate to the API and then execute API calls to Planning Center Online.</p><p>You can get your authentication credentials by <a target="_blank" href="https://api.planningcenteronline.com/oauth/applications">clicking here</a> and scrolling down to "Personal Access Tokens"</p>';
-	}
-
-
-	/**
-	 * Get the stored value of an option for admin
+	 * @param $cmb2 \CMB2 object
 	 *
-	 * @param string $key
-	 * @param boolean $options
-	 * @return void
-	 * @author costmo
+	 * @author Tanner Moushey, 11/30/23
 	 */
-	function get_option_value( $key, $options = false ) {
+	public function api_settings( $cmb2 ) {
 
-		if ( ! $options ) {
-			$options = get_option( 'pco_plugin_options' );
+		// handle legacy options
+		if ( $existing_options = get_option( 'pco_plugin_options' ) ) {
+			foreach( [ 'PCO_APPLICATION_ID' => 'pco_app_id', 'PCO_SECRET' => 'pco_secret' ] as $old_option => $new_option ) {
+				if ( ! empty( $existing_options[ $old_option ] ) ) {
+					Settings::set( $new_option, $existing_options[ $old_option ] );
+				}
+			}
+
+			delete_option( 'pco_plugin_options' );
 		}
 
-		// If the options don't exist, return empty string
-		if ( ! is_array( $options ) ) {
-			return '';
-		}
+		$cmb2->add_field( [
+			'name' => 'PCO API Configuration',
+			'id'   => 'pco_api_title',
+			'desc' => '<p>The following parameters are required to authenticate to the API and then execute API calls to Planning Center Online.</p><p>You can get your authentication credentials by <a target="_blank" href="https://api.planningcenteronline.com/oauth/applications">clicking here</a> and scrolling down to "Personal Access Tokens"</p>',
+			'type' => 'title',
+		] );
 
-		// If the key is in the array, return the value, else return empty string.
+		$cmb2->add_field( [
+			'name' => 'Event',
+			'id'   => 'pco_app_id',
+			'type' => 'text',
+		] );
 
-		return array_key_exists( $key, $options ) ? $options[ $key ] : '';
+		$cmb2->add_field( [
+			'name' => 'Application ID',
+			'id'   => 'pco_app_id',
+			'type' => 'text',
+		] );
+
+		$cmb2->add_field( [
+			'name' => 'Application Secret',
+			'id'   => 'pco_secret',
+			'type' => 'text',
+		] );
 	}
-
-	/**
-	 * Render Application ID admin input
-	 *
-	 * @param array $args
-	 * @return void
-	 * @author costmo
-	 */
-	function pco_app_id_callback( $args ) {
-
-		$options = get_option( 'pco_plugin_options' );
-		$opt = $this->get_option_value( 'PCO_APPLICATION_ID', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="PCO_APPLICATION_ID" name="pco_plugin_options[PCO_APPLICATION_ID]" value="' . $opt . '" size="60"/>';
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="PCO_APPLICATION_ID"> ' . $args[0] . '</label>';
-
-		echo $html;
-
-	} // end pco_app_id_callback
-
-	/**
-	 * Render Application Secret admin input
-	 *
-	 * @param array $args
-	 * @return void
-	 * @author costmo
-	 */
-	function pco_app_secret_callback( $args ) {
-
-		$options = get_option( 'pco_plugin_options' );
-		$opt = $this->get_option_value( 'PCO_SECRET', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="password" id="PCO_SECRET" name="pco_plugin_options[PCO_SECRET]" value="' . $opt . '" size="60"/>';
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="PCO_SECRET"> ' . $args[0] . '</label>';
-
-		echo $html;
-
-	} // end pco_app_secret_callback
 
 	/**
 	 * Get oAuth and API connection parameters from the database
 	 *
-	 * @param string $option_slug			Ignored
 	 * @return bool
 	 */
-	function load_connection_parameters( $option_slug = 'pco_plugin_options' ) {
-		return parent::load_connection_parameters( 'pco_plugin_options' );
-	}
+	function load_connection_parameters() {
+		$app_id = Settings::get( 'pco_app_id' );
+		$secret = Settings::get( 'pco_secret' );
 
-	/**
-	 * Get parameters for this connection
-	 *
-	 * @param string $option_slug
-	 * @return array
-	 * @author costmo
-	 */
-	function get_connection_parameters( $option_slug = 'pco_plugin_options' ) {
-		return parent::get_connection_parameters( $option_slug );
+		if( empty( $app_id ) || empty( $secret ) ) {
+			return false;
+		}
+
+		putenv( "PCO_APPLICATION_ID=$app_id" );
+		putenv( "PCO_SECRET=$secret" );
+
+		return true;
 	}
 
 	/**

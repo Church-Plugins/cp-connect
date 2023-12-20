@@ -1,6 +1,8 @@
 <?php
 namespace CP_Connect\ChMS;
 
+use CP_Connect\Admin\Settings;
+
 abstract class ChMS {
 
 	/**
@@ -35,13 +37,11 @@ abstract class ChMS {
 
 	protected function __construct() {
 		add_action( 'init', [ $this, 'integrations' ], 500 );
-		if ( isset( $_REQUEST['cp-connect-pull'] ) || get_option( 'cp_connect_pulling' ) ) {
-			delete_option( 'cp_connect_pulling' );
+		add_action( 'cpc_main_options_metabox', [ $this, 'api_settings' ] );
+		add_action( 'cmb2_save_options-page_fields_cpc_main_options_page', [ $this, 'maybe_add_connection_message' ] );
+
+		if ( Settings::get( 'pull_now' ) ) {
 			add_action('admin_notices', [ $this, 'general_admin_notice' ] );
-		}
-		
-		if ( isset( $_POST['cp-connect-pull'] ) ) {
-			update_option( 'cp_connect_pulling', true );
 		}
 	}
 
@@ -93,60 +93,6 @@ abstract class ChMS {
 	}
 
 	/**
-	 * Load connection parameters from the database
-	 *
-	 * Returns true if the connection is configured, false otherwise
-	 *
-	 * @param string $option_slug
-	 * @return bool
-	 *
-	 */
-	function load_connection_parameters( $option_slug = '' ) {
-
-		// If no options available then just return - it hasn't been setup yet
-		$options = get_option( $option_slug ?? md5( time() ), false );
-		if( empty( $option_slug ) || !is_string( $option_slug ) || false === $options ) {
-			return false;
-		}
-		// Sanity check the response
-		if( empty( $options ) || !is_array( $options ) ) {
-			return false;
-		}
-
-		// If there are no stored values, we still consider it unconfigured/empty
-		$value_length = 0;
-		foreach ( $options as $option => $value ) {
-			$envString = $option . '=' . $value;
-			$value_length += strlen( trim( $value ) );
-			putenv( $envString );
-		}
-
-		return ($value_length > 0) ? true : false;
-	}
-
-	/**
-	 * Get parameters for this connection
-	 *
-	 * @param string $option_slug
-	 * @return array
-	 * @author costmo
-	 */
-	function get_connection_parameters( $option_slug = '' ) {
-
-		// If no options available then just return - it hasn't been setup yet
-		$options = get_option( $option_slug ?? md5( time() ), false );
-		if( empty( $option_slug ) || !is_string( $option_slug ) || false === $options ) {
-			return [];
-		}
-		// Sanity check the response and normalize a potentially invalid return
-		if( empty( $options ) || !is_array( $options ) ) {
-			return [];
-		}
-
-		return $options;
-	}
-
-	/**
 	 * Utility to turn an aribratray string into a useable slug
 	 *
 	 * @param string $string
@@ -155,4 +101,43 @@ abstract class ChMS {
 	public static function string_to_slug( $string ) {
 		return str_replace( " ", "_", strtolower( $string ) );
 	}
+
+	/**
+	 * Register the settings fields
+	 *
+	 * @since  1.0.4
+	 *
+	 * @param $cmb2 \CMB2 object
+	 *
+	 * @author Tanner Moushey, 11/30/23
+	 */
+	abstract function api_settings( $cmb2 );
+
+	/**
+	 * Check the connection to the ChMS
+	 *
+	 * @since  1.0.4
+	 *
+	 * @return null
+	 */
+	public function maybe_add_connection_message() {
+		if ( ! $response = $this->check_connection() ) {
+			return;
+		}
+
+		$response['type'] = 'success' === $response['status'] ? 'updated' : 'error';
+		update_option( 'cp_settings_message', $response );
+	}
+
+	/**
+	 * Check the connection to the ChMS
+	 *
+	 * @since  1.0.4
+	 *
+	 * @return bool | array
+	 */
+	public function check_connection() {
+		return false;
+	}
+
 }

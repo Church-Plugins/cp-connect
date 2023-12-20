@@ -2,7 +2,8 @@
 
 namespace CP_Connect\ChMS;
 
-use ChurchCommunityBuilderAPI\CCBPress_Connection as CCB_API;
+use ChurchCommunityBuilderAPI\API as CCB_API;
+use CP_Connect\Admin\Settings;
 
 class ChurchCommunityBuilder extends ChMS {
 
@@ -14,18 +15,47 @@ class ChurchCommunityBuilder extends ChMS {
 		add_action( 'cp_update_item_after', [ $this, 'load_group_image' ], 10, 3 );
 		add_filter( 'cp_group_get_thumbnail', [ $this, 'get_group_image' ], 10, 2 );
 
-		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
-		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
 	}
 
 
 	public function api() {
 
 		if( empty( $this->api ) ) {
-			$this->api = $pco = new CCB_API();
+			$this->api = new CCB_API();
 		}
 
 		return $this->api;
+	}
+
+	public function check_connection() {
+
+		// make sure we have all required parameters
+		foreach( [ 'api_prefix', 'api_user', 'api_pass' ] as $option ) {
+			if ( ! Settings::get( $option ) ) {
+				return false;
+			}
+		}
+
+		try {
+			$response = $this->api()->test();
+
+			if ( 'success' == $response ) {
+				return [
+					'status' => 'success',
+					'message' => __( 'Connection successful', 'cp-connect' ),
+				];
+			}
+
+			return [
+				'status' => 'failed',
+				'message' => $response,
+			];
+		} catch ( \Exception $e ) {
+			return [
+				'status' => 'failed',
+				'message' => $e->getMessage(),
+			];
+		}
 	}
 
 
@@ -155,328 +185,52 @@ class ChurchCommunityBuilder extends ChMS {
 		return $value;
 	}
 
-
 	/**
-	 * This function introduces a single plugin menu option into the WordPress 'Plugins'
-	 * menu.
+	 * Register the settings fields
+	 *
+	 * @since  1.0.5
+	 *
+	 * @param $cmb2 \CMB2 object
+	 *
+	 * @author Tanner Moushey, 11/30/23
 	 */
+	public function api_settings( $cmb2 ) {
 
-	function plugin_menu() {
-
-		add_submenu_page( 'options-general.php',
-			'Church Community Builder Integration',         // The title to be displayed in the browser window for this page.
-			'CCB',                        // The text to be displayed for this menu item
-			'administrator',                    // Which type of users can see this menu item
-			'ccb_plugin_options', // The unique ID - that is, the slug - for this menu item
-			[ $this, 'plugin_display' ]  // The name of the function to call when rendering the page for this menu
-		);
-
-	} // end sandbox_example_theme_menu
-
-	/**
-	 * Renders a simple page to display for the plugin menu defined above.
-	 */
-	function plugin_display() {
-		?>
-		<!-- Create a header in the default WordPress 'wrap' container -->
-		<div class="wrap">
-			<!-- Add the icon to the page -->
-			<div id="icon-themes" class="icon32"></div>
-			<h2>Ministry Platform Plugin Options</h2>
-			<p class="description">Here you can set the parameters to authenticate to and use the Ministry Platform
-				API</p>
-			<!-- Make a call to the WordPress function for rendering errors when settings are saved. -->
-			<?php settings_errors(); ?>
-
-			<!-- Create the form that will be used to render our options -->
-			<form method="post" action="options.php">
-				<?php settings_fields( 'ccb_plugin_options' ); ?>
-				<?php do_settings_sections( 'ccb_plugin_options' ); ?>
-				<p class="submit">
-					<?php submit_button( null, 'primary', 'submit', false ); ?>
-					<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
-				</p>
-			</form>
-		</div> <!-- /.wrap -->
-
-
-		<?php
-	} // end sandbox_plugin_display
-
-
-	function initialize_plugin_options() {
-
-		// If the options don't exist, add them
-		if ( false == get_option( 'ccb_plugin_options' ) ) {
-			add_option( 'ccb_plugin_options' );
-		} // end if
-
-
-		// First, we register a section. This is necessary since all future options must belong to one.
-		add_settings_section(
-			'ccb_settings_section',                           // ID used to identify this section and with which to register options
-			'API Configuration Options',                                  // Title to be displayed on the administration page
-			[ $this, 'ccb_section_callback' ],  // Callback used to render the description of the section
-			'ccb_plugin_options'                              // Page on which to add this section of options
-		);
-
-		/**
-		 * The API URL field
-		 */
-
-		add_settings_field(
-			'api_prefix',
-			'<strong>' . __('Your CCB Website', 'ccbpress-core') . '</strong>',
-			array( $this, 'input_callback' ),
-			'ccb_plugin_options',
-			'ccb_settings_section',
-			array(
-				'field_id'  => 'api_prefix',
-				'page_id'   => 'ccb_plugin_options',
-				'size'      => 'medium',
-				'label'     => __('The URL you use to access your Church Community Builder site.', 'ccbpress-core'),
-				'before'    => '<code>https://</code>',
-				'after'    => '<code>.ccbchurch.com</code>'
-			)
-		);
-
-		/**
-		 * The API username field
-		 */
-
-		add_settings_field(
-			'api_user',
-			'<strong>' . __( 'API Username', 'ccbpress-core' ) . '</strong>',
-			array( $this, 'input_callback' ),
-			'ccb_plugin_options',
-			'ccb_settings_section',
-			array(
-				'field_id'  	=> 'api_user',
-				'page_id'   	=> 'ccb_plugin_options',
-				'size'      	=> 'medium',
-				'autocomplete'	=> 'off',
-				'label'			=> __( 'This is different from the login you use for Church Community Builder.', 'ccbpress-core' ),
-			)
-		);
-
-		/**
-		 * The API password field
-		 */
-
-		add_settings_field(
-			'api_pass',
-			'<strong>' . __( 'API Password', 'ccbpress-core' ) . '</strong>',
-			array( $this, 'input_callback' ),
-			'ccb_plugin_options',
-			'ccb_settings_section',
-			array(
-				'field_id'  	=> 'api_pass',
-				'page_id'   	=> 'ccb_plugin_options',
-				'type'      	=> 'password',
-				'size'      	=> 'medium',
-				'autocomplete'	=> 'off',
-			)
-		);
-
-		// Disabled for now, requires additional JS from ccbpress-core plugin
-		// if ( $this->api()->is_connected() ) {
-
-		// 	// First, we register a section. This is necessary since all future options must belong to one.
-		// 	add_settings_section(
-		// 		'ccb_settings_api_services_section',
-		// 		__( 'API Services', 'ccbpress-core' ),
-		// 		array( $this, 'api_services_section_callback' ),
-		// 		'ccb_plugin_options'
-		// 	);
-
-		// 	add_settings_field(
-		// 		'check_services_form',
-		// 		'<strong>' . __('Check Your Services', 'ccbpress-core') . '</strong>',
-		// 		array( $this, 'text_callback' ),
-		// 		'ccb_plugin_options',
-		// 		'ccb_settings_api_services_section',
-		// 		array(
-		// 			'header' => NULL,
-		// 			'title' => NULL,
-		// 			'content' => '<a class="button" id="ccbpress-ccb-service-check-button">Check Services Now</a><div id="ccbpress-ccb-service-check-results"></div>',
-		// 		)
-		// 	);
-
-		// }
-
-		// Finally, we register the fields with WordPress
-		register_setting(
-			'ccb_plugin_options',
-			'ccb_plugin_options',
-    		array( $this, 'sanitize_callback' )
-		);
-
-
-	}
-
-    public function ccb_section_callback() {
-        echo '<p>' . __('These are the settings for the API connection to Church Community Builder.', 'ccbpress-core') . '</p>';
-	}
-
-	public function sanitize_callback( $input ) {
-
-	    //return $input;
-	    // Define all of the variables that we'll be using
-		$ccb_api_user = "";
-		$ccb_api_pass = "";
-		$ccb_api_prefix = "";
-		$output = array();
-
-		// Loop through each of the incoming options
-		foreach ( $input as $key => $value ) {
-
-			// Check to see if the current option has a value. If so, process it.
-			if ( isset( $input[$key] ) ) {
-
-				switch ( $key ) {
-
-					case 'api_user':
-						$ccb_api_user = $input[$key];
-						break;
-
-					case 'api_pass':
-						$ccb_api_pass = $input[$key];
-						break;
-
-					case 'api_prefix':
-						$ccb_api_prefix = $input[$key];
-						break;
-
+		// handle legacy options
+		if ( $existing_options = get_option( 'ccb_plugin_options' ) ) {
+			foreach( [ 'api_prefix', 'api_user', 'api_pass' ] as $option ) {
+				if ( ! empty( $existing_options[ $option ] ) ) {
+					Settings::set( $option, $existing_options[ $option ] );
 				}
-
-				// Strip all HTML and PHP tags and properly handle quoted strings
-				$output[$key] = strip_tags( stripslashes( $input[$key] ) );
-
 			}
 
+			delete_option( 'ccb_plugin_options' );
 		}
 
-		// Let's test the connection with our newly saved settings
-	    $output['connection_test'] = (string) $this->api()->test_connection( $output['api_prefix'], $output['api_user'], $output['api_pass'] );
+		$cmb2->add_field( [
+			'name'   => __( 'Your CCB Website', 'cp-connect' ),
+			'id'     => 'api_prefix',
+//			'desc'   => __( 'The URL you use to access your Church Community Builder site.', 'cp-connect' ),
+			'type'   => 'text',
+			'before_field' => '<code>https://</code>',
+			'after_field'  => '<code>.ccbchurch.com</code><p class="cmb2-metabox-description">' . __( 'The URL you use to access your Church Community Builder site.', 'cp-connect' ) . '</p>',
+		] );
 
-		// Return the array
-		return $output;
+		$cmb2->add_field( [
+			'name' => __( 'API Username', 'cp-connect' ),
+			'id'   => 'api_user',
+			'type' => 'text',
+			'desc' => __( 'This is different from the login you use for Church Community Builder.', 'cp-connect' ),
+		] );
 
-	}
-
-    /**
-     * Text Input Field
-     *
-     * @package    CCBPress_Core
-     * @since      1.0.0
-     *
-     * @param	array	$args	Arguments to pass to the function. (See below).
-	 *
-	 * string	$args[ 'field_id' ]
-	 * string	$args[ 'page_id' ]
-	 * string	$args[ 'label' ]
-     *
-     * @return	string	HTML to display the field.
-     */
-    public function input_callback( $args ) {
-
-        // Set the defaults.
-		$defaults = array(
-			'field_id'		=> null,
-			'page_id'		=> null,
-			'label'      	=> null,
-            'type'          => 'text',
-			'size'          => 'regular',
-            'before'        => null,
-            'after'         => null,
-			'autocomplete'	=> null,
-		);
-
-		// Parse the arguments.
-		$args = wp_parse_args( $args, $defaults );
-
-        // Get the saved values from WordPress.
-    	$options = get_option( $args['page_id'] );
-
-
-        // Start the output buffer.
-        ob_start();
-        ?>
-        <?php echo $args['before']; ?>
-        <input type="<?php echo esc_attr( $args['type'] ); ?>" id="<?php echo esc_attr( $args['field_id'] ); ?>" name="<?php echo esc_attr( $args['page_id'] ); ?>[<?php echo esc_attr( $args['field_id'] ); ?>]" value="<?php echo ( isset( $options[ $args['field_id'] ] ) ? $options[ $args['field_id'] ] : '' ); ?>" class="<?php esc_attr_e( $args['size'] ); ?>-text"<?php echo ( 'off' === $args['autocomplete'] ) ? ' autocomplete="off"' : ''; ?> />
-        <?php echo $args['after']; ?>
-        <?php if ( $args['label'] != '' ) : ?>
-            <p class="description"><?php echo $args['label']; ?></p>
-        <?php endif; ?>
-
-        <?php
-    	// Print the output
-        echo ob_get_clean();
-
-    }
-
-   /**
-    * Text
-    *
-    * @package    CCBPress_Core
-    * @since      1.0.0
-    *
-    * @param	array	$args	Arguments to pass to the function. (See below).
-    *
-    * string	$args[ 'header_type' ]
-    * string	$args[ 'title' ]
-    * string	$args[ 'content' ]
-    *
-    * @return	string	HTML to display the field.
-    */
-
-   public function text_callback( $args ) {
-
-   	// Set the defaults
-   	$defaults = array(
-   		'header'	=> 'h2',
-   		'title'		=> NULL,
-   		'content'	=> NULL,
-   	);
-
-   	// Parse the arguments
-   	$args = wp_parse_args( $args, $defaults );
-
-   	ob_start();
-   	// Check that the title and header_type are not blank
-   	if ( ! is_null( $args['title'] ) ) {
-   		echo '<' . $args['header'] . '>' . $args['title'] . '</' . $args['header'] . '>';
-       }
-
-       // Check that the content is not blank
-   	if ( ! is_null ( $args['content'] ) ) {
-   		echo $args['content'];
-       }
-
-   	// Print the output
-       echo ob_get_clean();
-
-   } // text_callback()
-
-	public function api_services_section_callback() {
-        echo '<p>' . __('Use this tool to check if your API User has the appropriate API Services enabled in Church Community Builder.', 'ccbpress-core') . '</p>';
-	}
-
-	function get_option_value( $key, $options = false ) {
-
-		if ( ! $options ) {
-			$options = get_option( 'ccb_plugin_options' );
-		}
-
-		// If the options don't exist, return empty string
-		if ( ! is_array( $options ) ) {
-			return '';
-		}
-
-		// If the key is in the array, return the value, else return empty string.
-
-		return array_key_exists( $key, $options ) ? $options[ $key ] : '';
-
+		$cmb2->add_field( [
+			'name' => __( 'API Password', 'cp-connect' ),
+			'id'   => 'api_pass',
+			'type' => 'text',
+			'attributes' => [
+				'type' => 'password',
+			],
+		] );
 	}
 
 }

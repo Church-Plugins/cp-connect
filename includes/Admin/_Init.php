@@ -41,7 +41,7 @@ class _Init {
 	 */
 	protected function includes() {
 //		License::get_instance();
-//		Settings::get_instance();
+		Settings::get_instance();
 	}
 
 	/**
@@ -51,11 +51,19 @@ class _Init {
 	 */
 	protected function actions() {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+		add_action( 'admin_init', [ $this, 'maybe_admin_message' ] );
 	}
 
 	/** Actions ***************************************************/
 
 	public function enqueue() {
 		wp_enqueue_script( 'cp-connect-admin', CP_CONNECT_PLUGIN_URL . 'assets/js/admin.js', [ 'jquery' ], CP_CONNECT_PLUGIN_VERSION );
+	}
+
+	public function maybe_admin_message() {
+		if ( $message = get_option( 'cp_settings_message' ) ) {
+			add_settings_error( 'cpc_main_options-notices', '', $message['message'], $message['type'] );
+			delete_option( 'cp_settings_message' );
+		}
 	}
 }

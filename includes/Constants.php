@@ -52,7 +52,7 @@ if( !defined( 'CP_CONNECT_STORE_URL' ) ) {
 }
 if( !defined( 'CP_CONNECT_ITEM_NAME' ) ) {
 	 define ( 'CP_CONNECT_ITEM_NAME',
-	 	'Church Plugins - Staff'
+	 	'CP Connect'
 	);
 }
 
