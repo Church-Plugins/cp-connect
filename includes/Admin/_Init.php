@@ -56,9 +56,7 @@ class _Init {
 
 	/** Actions ***************************************************/
 
-	public function enqueue() {
-		wp_enqueue_script( 'cp-connect-admin', CP_CONNECT_PLUGIN_URL . 'assets/js/admin.js', [ 'jquery' ], CP_CONNECT_PLUGIN_VERSION );
-	}
+	public function enqueue() {}
 
 	public function maybe_admin_message() {
 		if ( $message = get_option( 'cp_settings_message' ) ) {
