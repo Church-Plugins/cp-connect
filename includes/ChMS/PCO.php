@@ -944,12 +944,17 @@ class PCO extends ChMS {
 
 			$item_details = $this->pull_group_details( $group, $raw['included'] );
 
+			$is_visible = true;
 			foreach( $item_details as $index => $item_data ) {
 
 				$type = $item_data['type'] ?? '';
 
 				if( 'GroupType' === $type ) {
 					$args['group_type'][] = $item_data['attributes']['name'] ?? '';
+
+					if ( empty( $item_data['attributes']['church_center_visible'] ) ) {
+						$is_visible = false;
+					}
 				} else if( 'Location' === $type ) {
 					// TODO: Maybe pull location information from $group['relationships']['location']['data']['id']
 					if ( 'exact' == $item_data['attributes']['display_preference'] )  {
@@ -958,6 +963,10 @@ class PCO extends ChMS {
 						$args['meta_input']['location'] = $item_data['attributes']['name'] ?? '';
 					}
 				}
+			}
+
+			if ( ! $is_visible ) {
+				continue;
 			}
 
 			// TODO: Look this up
