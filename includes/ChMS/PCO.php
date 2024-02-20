@@ -871,6 +871,10 @@ class PCO extends ChMS {
 
 		foreach ( $group['relationships'] as $relationship ) {
 			foreach ( $included as $include ) {
+				if ( empty( $include['id'] ) || empty( $relationship['data'] ) || empty( $relationship['data']['id'] ) ) {
+					continue;
+				}
+
 				if ( $include['id'] == $relationship['data']['id'] ) {
 					$details[] = $include;
 				}
@@ -896,7 +900,7 @@ class PCO extends ChMS {
 			$this->api()
 				->module('groups')
 				->table('groups')
-				->includes('location,group_type')
+				->includes('location,group_type,enrollment')
 				->get();
 
 		if( !empty( $this->api()->errorMessage() ) ) {
@@ -914,8 +918,27 @@ class PCO extends ChMS {
 
 		$formatted = [];
 
+		$enrollment_strategies = $this->get_option( 'group_enrollment', [ 'open_signup', 'request_to_join' ] );
+
 		$counter = 0;
 		foreach( $items as $group ) {
+
+			$include = false;
+			$enrollment = $this->get_relationship_data( 'enrollment', $group, $raw );
+
+			foreach( $enrollment as $e ) {
+				if ( empty( $e['strategy'] ) ) {
+					continue;
+				}
+
+				if ( in_array( $e['strategy'], $enrollment_strategies ) ) {
+					$include = true;
+				}
+			}
+
+			if ( ! $include ) {
+				continue;
+			}
 
 			$start_date = strtotime( $group['attributes']['created_at'] ?? null );
 			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
@@ -1110,6 +1133,19 @@ class PCO extends ChMS {
 			'options' => [
 				1 => __( 'Pull from Groups', 'cp-library' ),
 				0 => __( 'Do not pull', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
+			'name'    => __( 'Group Enrollment Status' ),
+			'desc'    => __( 'Select the enrollment options to include in the group sync.', 'cp-connect' ),
+			'id'      => 'groups_enrollment',
+			'type'    => 'multicheck_inline',
+			'default' => [ 'request_to_join', 'open_signup' ],
+			'options' => [
+				'request_to_join' => __( 'Request to Join', 'cp-library' ),
+				'open_signup'     => __( 'Open Signup', 'cp-library' ),
+				'closed'          => __( 'Closed', 'cp-library' ),
 			]
 		) );
 	}
