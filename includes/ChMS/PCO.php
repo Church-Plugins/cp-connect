@@ -918,21 +918,29 @@ class PCO extends ChMS {
 
 		$formatted = [];
 
-		$enrollment_strategies = $this->get_option( 'group_enrollment', [ 'open_signup', 'request_to_join' ] );
+		$enrollment_status = $this->get_option( 'groups_enrollment_status', [ 'open' ] );
+		$enrollment_strategies = $this->get_option( 'groups_enrollment_strategy', [ 'open_signup', 'request_to_join' ] );
 
 		$counter = 0;
 		foreach( $items as $group ) {
 
-			$include = false;
+			$include    = true;
 			$enrollment = $this->get_relationship_data( 'enrollment', $group, $raw );
 
-			foreach( $enrollment as $e ) {
-				if ( empty( $e['strategy'] ) ) {
-					continue;
-				}
+			if ( ! empty( $enrollment_status ) || ! empty( $enrollment_strategies ) ) {
+				$include = false;
 
-				if ( in_array( $e['strategy'], $enrollment_strategies ) ) {
-					$include = true;
+				foreach ( $enrollment as $e ) {
+					if ( empty( $e['strategy'] ) ) {
+						continue;
+					}
+
+					$strategy_check = empty( $enrollment_strategies ) || in_array( $e['strategy'], $enrollment_strategies );
+					$status_check   = empty( $enrollment_status ) || in_array( $e['status'], $enrollment_status );
+
+					if ( $strategy_check && $status_check ) {
+						$include = true;
+					}
 				}
 			}
 
@@ -1138,8 +1146,22 @@ class PCO extends ChMS {
 
 		$settings->add_field( array(
 			'name'    => __( 'Group Enrollment Status' ),
-			'desc'    => __( 'Select the enrollment options to include in the group sync.', 'cp-connect' ),
-			'id'      => 'groups_enrollment',
+			'desc'    => __( 'Select the enrollment status options to include in the group sync.', 'cp-connect' ),
+			'id'      => 'groups_enrollment_status',
+			'type'    => 'multicheck',
+			'default' => [ 'open' ],
+			'options' => [
+				'open'    => __( 'Open - strategy is not closed and no limits have been reached', 'cp-library' ),
+				'closed'  => __( 'Closed - strategy is closed or limits have been reached', 'cp-library' ),
+				'full'    => __( 'Full - member limit has been reached', 'cp-library' ),
+				'private' => __( 'Private - group is unlisted', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
+			'name'    => __( 'Group Enrollment Strategy' ),
+			'desc'    => __( 'Select the enrollment strategy options to include in the group sync.', 'cp-connect' ),
+			'id'      => 'groups_enrollment_strategy',
 			'type'    => 'multicheck_inline',
 			'default' => [ 'request_to_join', 'open_signup' ],
 			'options' => [
