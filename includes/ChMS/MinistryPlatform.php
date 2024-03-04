@@ -3,7 +3,7 @@
 namespace CP_Connect\ChMS;
 
 use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
-
+use CP_Connect\Admin\Settings;
 
 /**
  * Ministry Platform Integration provider
@@ -13,284 +13,148 @@ use MinistryPlatformAPI\MinistryPlatformTableAPI as MP;
  */
 class MinistryPlatform extends ChMS {
 
+	public $settings_key = 'cpc_mp_options';
+
 	public function integrations() {
 		$this->mpLoadConnectionParameters();
-
 		add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
-
-		add_action( 'admin_init', [ $this, 'initialize_plugin_options' ] );
-
-		add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
+		add_action( 'cmb2_render_mp_fields', [ $this, 'render_field_select' ], 10, 5 );
 	}
 
 	/**
-	 * This function introduces a single plugin menu option into the WordPress 'Plugins'
-	 * menu.
+	 * Registers main options
 	 */
-	function plugin_menu() {
+	public function api_settings( $cmb2 ) {
+		$cmb2->add_field( [
+			'name' => __( 'API Configuration', 'cp-connect' ),
+			'type' => 'title',
+			'id'   => 'mp_api_config_title',
+		] );
 
-		add_submenu_page( 'options-general.php',
-			'Ministry Platform Integration',         // The title to be displayed in the browser window for this page.
-			'Ministry Platform',                        // The text to be displayed for this menu item
-			'administrator',                    // Which type of users can see this menu item
-			'ministry_platform_plugin_options', // The unique ID - that is, the slug - for this menu item
-			[ $this, 'plugin_display' ]  // The name of the function to call when rendering the page for this menu
+		$cmb2->add_field( [
+			'name' => __( 'API Endpoint', 'cp-connect' ),
+			'desc' => __( 'ex: https://my.mychurch.org/ministryplatformapi', 'cp-connect' ),
+			'id'   => 'mp_api_endpoint',
+			'type' => 'text',
+		] );
+
+		$cmb2->add_field( [
+			'name' => __( 'Oauth Discovery Endpoint', 'cp-connect' ),
+			'desc' => __( 'ex: https://my.mychurch.org/ministryplatform/oauth', 'cp-connect' ),
+			'id'   => 'mp_oauth_discovery_endpoint',
+			'type' => 'text',
+		] );
+
+		$cmb2->add_field( [
+			'name' => __( 'Client ID', 'cp-connect' ),
+			'desc' => __( 'The Client ID is defined in MP on the API Client page.', 'cp-connect' ),
+			'id'   => 'mp_client_id',
+			'type' => 'text',
+		] );
+
+		$cmb2->add_field( [
+			'name' => __( 'Client Secret', 'cp-connect' ),
+			'desc' => __( 'The Client Secret is defined in MP on the API Client page.', 'cp-connect' ),
+			'id'   => 'mp_client_secret',
+			'type' => 'text',
+		] );
+
+		$cmb2->add_field( [
+			'name' => __( 'Scope', 'cp-connect' ),
+			'desc' => __( 'Will usually be http://www.thinkministry.com/dataplatform/scopes/all', 'cp-connect' ),
+			'id'   => 'mp_api_scope',
+			'type' => 'text',
+		] );
+	}
+
+	/**
+	 * Registers options in the Settings tab
+	 */
+	public function api_settings_tab() {
+		$args = array(
+			'id'           => 'cpc_mp_page',
+			'title'        => 'Ministry Platform Settings',
+			'object_types' => array( 'options-page' ),
+			'option_key'   => $this->settings_key,
+			'parent_slug'  => 'cpc_main_options',
+			'tab_group'    => 'cpc_main_options',
+			'tab_title'    => 'Settings',
+			'display_cb'   => [ $this, 'options_display_with_tabs' ]
 		);
-	}
 
-	/**
-	 * Displays the options page
-	 */
-	function plugin_display() {
+		$settings = new_cmb2_box( $args );
 
-		$default_tab = 'connect';
-		$tab = isset($_GET['tab']) ? $_GET['tab'] : $default_tab;
-		?>
+		$settings->add_field( [
+			'name'        => __( 'Group Fields', 'cp-connect' ),
+			'type'        => 'title',
+			'id'          => 'group_fields_title',
+		] );
 
-		<div class='wrap'>
-			<nav class='nav-tab-wrapper'>
-				<a href='?page=ministry_platform_plugin_options&tab=connect' class='nav-tab <?php echo $tab == 'connect' ? 'nav-tab-active' : ''; ?>'><?php esc_html_e( 'Connect', 'cp-connect' ) ?></a>
-				<a href='?page=ministry_platform_plugin_options&tab=group-options' class='nav-tab <?php echo $tab == 'group-options' ? 'nav-tab-active' : ''; ?>'><?php esc_html_e( 'Group Options', 'cp-connect' ) ?></a>
-			</nav>
-			<form method="post" action=<?php echo esc_url( add_query_arg( 'tab', $tab, admin_url( 'options.php' ) ) ) ?>>
-				<?php switch ( $tab ) {
-					case 'connect':
-						$this->render_api_config_tab();
-						break;
-					case 'group-options':
-						$this->render_group_mapping_tab();
-						break;
-				} ?>
-			</form>
-		</div>
-		<?php
-	}
+		$settings->add_field( [
+			'name'  => __( 'Group Fields', 'cp-connect' ),
+			'type'  => 'mp_fields',
+			'id'    => 'group_fields', // id must be in the format of {object_type}_fields
+			'table' => 'Groups',
+			'desc'  => __( 'These fields are pulled from Ministry Platform when pulling groups', 'cp-connect' )
+		] );
 
-	/**
-	 * Conditionally initializes plugins options based on the current tab
-	 */
-	public function initialize_plugin_options() {
-		$tabname = isset( $_GET['tab'] ) ? $_GET['tab'] : 'connect';
+		$settings->add_field( [
+			'name' => __( 'Group Field Mapping', 'cp-connect' ),
+			'type' => 'title',
+			'id'   => 'group_mapping_title',
+			'desc' => __( 'The following parameters are used to map Ministry Platform groups to the CP Groups plugin', 'cp-connect' ),
+		] );
 
-		switch ( $tabname ) {
-			case 'connect':
-				$this->initialize_api_config_options();
-				break;
-			case 'group-options':
-				$this->initialize_group_mapping_options();
-				break;
+		$mapping      = $this->get_default_object_mapping( 'group' );
+		$valid_fields = $this->get_valid_fields( 'group', 'Groups' );
+		$names        = $this->get_field_labels( 'group' );
+
+		if ( empty( $valid_fields ) ) {
+			return;
 		}
-	}
 
-	/**
-	 * Initialize the api config options in the admin
-	 */
-	function initialize_api_config_options() {
-		/*** API Configuration Settings ***/
-
-		$api_config_option = 'ministry_platform_api_config';
-		$api_config_tab    = 'ministry_platform_api_config_tab';
-		$api_config_group  = 'ministry_platform_api_config_group';
-
-		/* register the setting group */
-		register_setting( $api_config_group, $api_config_option );
-
-		/* add the settings section */
-		add_settings_section(
-			$api_config_option,                    // ID used to identify this section and with which to register options
-			'API Configuration',                   // Title to be displayed on the administration page
-			[ $this, 'api_config_callback' ],      // Callback used to render the description and fields for this section.
-			$api_config_tab                        // Tab on which to add this section of options
-		);
-
-		/* Introduce the fields for the configuration information. */
-		add_settings_field(
-			'MP_API_ENDPOINT',                                    // ID used to identify the field throughout the theme.
-			'API Endpoint',                                       // The label to the left of the option interface element.
-			[ $this, 'mp_api_endpoint_callback' ],                // The name of the function responsible for rendering the option interface.
-			$api_config_tab,                                      // The tab on which this option will be displayed.
-			$api_config_option,                                   // The option name to which this field belongs.
-			[ 'ex: https://my.mychurch.org/ministryplatformapi' ] // The array of arguments to pass to the callback. In this case, just a description.
-		);
-
-		add_settings_field(
-			'MP_OAUTH_DISCOVERY_ENDPOINT',
-			'Oauth Discovery Endpoint',
-			[ $this, 'mp_oauth_discovery_callback' ],
-			$api_config_tab,
-			$api_config_option,
-			[ 'ex: https://my.mychurch.org/ministryplatform/oauth' ]
-		);
-
-		add_settings_field(
-			'MP_CLIENT_ID',
-			'MP Client ID',
-			[ $this, 'mp_client_id_callback' ],
-			$api_config_tab,
-			$api_config_option,
-			[ 'The Client ID is defined in MP on the API Client page.' ]
-		);
-
-		add_settings_field(
-			'MP_CLIENT_SECRET',
-			'MP Client Secret',
-			[ $this, 'mp_client_secret_callback' ],
-			$api_config_tab,
-			$api_config_option,
-			[ 'The Client Secret is defined in MP on the API Client page.' ]
-		);
-
-		add_settings_field(
-			'MP_API_SCOPE',
-			'Scope',
-			[ $this, 'mp_api_scope_callback' ],
-			$api_config_tab,
-			$api_config_option,
-			[ 'Will usually be http://www.thinkministry.com/dataplatform/scopes/all' ]
-		);
-
-		/*** End API Configuration Settings ***/
-	}
-
-	/**
-	 * Get valid field names from the MP API.
-	 */
-	protected function valid_fields() {
-		$valid_fields = array( 'select' );
-
-		// initialize the MP API wrapper.
-		$mp = new MP();
-
-		// Authenticate to get access token required for API calls.
-		if ( $mp->authenticate() ) {
-
-			$fields = $this->get_all_group_mapping_fields();
-
-			// get the list of fields from the Groups table.
-			$table = $mp->table( 'Groups' );
-
-			// gets a group from API just to verify that all specified fields exist.
-			$group = $table->select( implode( ',', $fields ) )->top( 1 )->get();
-
-			if ( $group && count( $group ) > 0 ) {
-				$group = $group[0];
+		$assoc_fields = array();
+		foreach ( $valid_fields as $field ) {
+			if ( ! is_string( $field ) || empty( $field ) ) {
+				continue;
 			}
-
-			// adds column names from group response to the available fields.
-			if ( ! empty( $group ) ) {
-				$valid_fields = array_merge( $valid_fields, array_keys( $group ) );
-			}
+			$assoc_fields[ $field ] = $field;
 		}
-
-		return $valid_fields;
-	}
-
-	/**
-	 * Save custom field selections
-	 *
-	 * @return void
-	 * @author costmo
-	 */
-	protected function save_custom_fields() {
-
-		// Sanity checks
-		if( wp_doing_ajax() || !wp_verify_nonce( $_POST['_cp_mp_nonce'], 'cp-connect-mp-fields' ) ) {
-			return;
-		}
-		if( empty( $_POST['option_page'] ) || 'ministry_platform_group_mapping_group' !== $_POST['option_page'] ) {
-			return;
-		}
-		if(
-			empty( $_POST['cp_connect_field_mapping_names'] ) || empty( $_POST['cp_connect_field_mapping_targets'] )  ||
-			!is_array( $_POST['cp_connect_field_mapping_names'] ) || !is_array( $_POST['cp_connect_field_mapping_targets'] ) ||
-			count( $_POST['cp_connect_field_mapping_names'] ) !== count( $_POST['cp_connect_field_mapping_targets'] )
-		) {
-			return;
-		}
-
-		$save_array = [];
-		foreach( $_POST['cp_connect_field_mapping_targets'] as $index => $target ) {
-			$save_array[ $target ] = $_POST['cp_connect_field_mapping_names'][ $index ];
-		}
-		update_option( 'cp_group_custom_field_mapping', $save_array );
-	}
-
-	/**
-	 * Initialize the group mapping options in the admin
-	 */
-	function initialize_group_mapping_options() {
-		/*** Group Field Mapping Settings ***/
-
-		if( !empty( $_POST ) ) {
-			$this->save_custom_fields();
-		}
-
-		$group_mapping_option = 'ministry_platform_group_mapping';       // the option id
-		$group_mapping_tab    = 'ministry_platform_group_mapping_tab';   // the id for the tab
-		$group_mapping_group  = 'ministry_platform_group_mapping_group'; // the id for the settings group
-
-		register_setting( $group_mapping_group, $group_mapping_option );
-
-		add_settings_section(
-			$group_mapping_option,
-			'Ministry Platform Field Mapping',
-			[ $this, 'group_mapping_callback' ],
-			$group_mapping_tab
-		);
-
-
-		$valid_fields = $this->valid_fields();
-		$names = $this->get_group_field_names();
-
-		$mapping = $this->get_default_group_mapping();
 
 		foreach( $mapping as $key => $value ) {
 			$name = isset( $names[ $key ] ) ? $names[ $key ] : '';
 
-			add_settings_field(
-				$key,
-				$name,
-				[ $this, 'field_mapping_callback' ],
-				$group_mapping_tab,
-				$group_mapping_option,
-				array(
-					'description' => '',
-					'valid_fields' => $valid_fields,
-					'key' => $key,
-					'default_value' => $value,
-					'option' => $group_mapping_option
-				)
-			);
+			$settings->add_field( [
+				'name'             => $name,
+				'desc'             => '',
+				'id'               => 'group_mapping_' . $key,
+				'type'             => 'select',
+				'show_option_none' => true,
+				'options'          => $assoc_fields,
+				'default'          => $value,
+			] );
 		}
 
-		/*** End Group Field Mapping Settings ***/
+		$settings->add_field( [
+			'name' => __( 'Custom Field Mapping', 'cp-connect' ),
+			'type' => 'title',
+			'id'   => 'custom_group_mapping_title',
+			'desc' => __( 'Adding fields below will create custom meta fields that will be added to groups. The information will be saved in a meta key called `cp_connect_{key}` where key is the field name converted to slug format.', 'cp-connect' ),
+		] );
+
+		$instance = $this;
+
+		$settings->add_field( [
+			'name' => __( 'Custom Field Mapping', 'cp-connect' ),
+			'type' => 'text',
+			'id'   => 'group_mapping',
+			'render_row_cb' => function( $field_args, $field ) use ($instance) {
+				$instance->display_custom_mapping_fields( $field_args, $field );
+			},
+			'table' => 'Groups',
+		] );
 	}
-
-	/**
-	 * Content displayed on the API config tab
-	 */
-	function api_config_callback() {
-		?>
-			<!-- Add the icon to the page -->
-			<div id="icon-themes" class="icon32"></div>
-			<h2>Ministry Platform Plugin Options</h2>
-			<p class="description">Here you can set the parameters to authenticate to and use the Ministry Platform
-				API</p>
-			<p>The following parameters are required to authenticate to the API using oAuth and then execute API calls to Ministry Platform.</p>
-		<?php
-	}
-
-	/**
-	 * Content displayed on the Group Mapping tab
-	 */
-	function group_mapping_callback() {
-		$this->render_field_select( 'ministry_platform_group_mapping' );
-
-		echo '<h3>Group Field Mapping</h3>';
-		echo '<p>The following parameters are used to map Ministry Platform groups to the CP Groups plugin</p>';
-	}
-
 
 	/**
 	 * Gets an object with data and a mapping array, and returns the object values associated with the mapping keys
@@ -311,127 +175,55 @@ class MinistryPlatform extends ChMS {
 	}
 
 	/**
-	 * The default group mapping fields to fetch from the MP API
-	 */
-	protected function get_default_group_mapping_fields() {
-		return array(
-			'Group_ID',
-			'Group_Name',
-			'Group_Type_ID_Table.[Group_Type]',
-			'Groups.Congregation_ID',
-			'Primary_Contact_Table.[First_Name]',
-			'Primary_Contact_Table.[Last_Name]',
-			'Groups.Description',
-			'Groups.Start_Date',
-			'Groups.End_Date',
-			'Life_Stage_ID_Table.[Life_Stage]',
-			'Group_Focus_ID_Table.[Group_Focus]',
-			'Offsite_Meeting_Address_Table.[Postal_Code]',
-			'Offsite_Meeting_Address_Table.[Address_Line_1]',
-			'Offsite_Meeting_Address_Table.[City]',
-			'Offsite_Meeting_Address_Table.[State/Region]',
-			'Meeting_Time',
-			'Meeting_Day_ID_Table.[Meeting_Day]',
-			'Meeting_Frequency_ID_Table.[Meeting_Frequency]',
-			'dp_fileUniqueId as Image_ID',
-			'Primary_Contact_Table.Display_Name',
-			'Child_Friendly_Group',
-			'Accessible',
-			'Meets_Online',
-		);
-	}
-
-	/**
-	 * The default API to group mapping
-	 */
-	protected function get_default_group_mapping() {
-		return array(
-			'chms_id'             => 'Group_ID',
-			'post_title'          => 'Group_Name',
-			'post_content'        => 'Description',
-			'leader'              => 'Display_Name',
-			'start_date'          => 'Start_Date',
-			'end_date'            => 'End_Date',
-			'thumbnail_url'       => 'Image_ID',
-			'frequency'           => 'Meeting_Frequency',
-			'city'                => 'City',
-			'state_or_region'     => 'State/Region',
-			'postal_code'         => 'Postal_Code',
-			'meeting_time'        => 'Meeting_Time',
-			'meeting_day'         => 'Meeting_Day',
-			'cp_location'         => 'Congregation_ID',
-			'group_category'      => 'Group_Focus',
-			'group_type'          => 'Group_Type',
-			'group_life_stage'    => 'Life_Stage',
-			'kid_friendly'        => 'Child_Friendly_Group',
-			'handicap_accessible' => 'Accessible',
-			'virtual'             => 'Meets_Online',
-		);
-	}
-
-	/**
-	 * Gets the names of the group fields
-	 */
-	protected function get_group_field_names() {
-		return array(
-			'chms_id'             => 'Group ID',
-			'post_title'          => 'Group Name',
-			'post_content'        => 'Description',
-			'leader'              => 'Group Leader',
-			'start_date'          => 'Start Date',
-			'end_date'            => 'End Date',
-			'thumbnail_url'       => 'Image ID',
-			'frequency'           => 'Meeting Frequency',
-			'location'            => 'Congregation ID',
-			'city'                => 'City',
-			'state_or_region'     => 'State/Region',
-			'postal_code'         => 'Postal Code',
-			'meeting_time'        => 'Meeting Time',
-			'meeting_day'         => 'Meeting Day',
-			'cp_location'         => 'Group Campus',
-			'group_category'      => 'Group Focus',
-			'group_type'          => 'Group Type',
-			'group_life_stage'    => 'Life Stage',
-			'kid_friendly'        => 'Child Friendly',
-			'handicap_accessible' => 'Accessible',
-			'virtual'             => 'Virtual',
-		);
-	}
-
-	/**
 	 * Render a interface to select additional fields to grab from the API
 	 *
 	 * @param string $option_id The option id.
 	 */
-	public function render_field_select( $option_id ) {
-		$option = get_option( $option_id );
+	public function render_field_select( $field, $escaped_value, $object_id, $object_type, $field_type_object ) {
+		preg_match( '/^([a-z]+)_fields$/', $field->args['id'], $matches );
 
-		$fields = isset( $option['fields'] ) ? $option['fields'] : array();
+		$object_type = $matches[1];
+
+		if ( ! $object_type ) {
+			return;
+		}
 
 		$mp = new MP();
 
-		if ( $mp->authenticate() ) {
-			$table = $mp->table( 'Groups' );
+		try {
+			$mp->authenticate();
+			$table = $mp->table( $field->args['table'] );
 
 			// makes a dummy request just to get any error messages from user specified fields.
-			$table->select( implode( ',', $this->get_all_group_mapping_fields() ) )->top( 1 )->get();
+			$table->select( implode( ',', $this->get_all_fields( $object_type ) ) )->top( 1 )->get();
 
 			$error = $table->errorMessage() ? json_decode( (string) $table->errorMessage(), true ) : false;
+		} catch ( \Exception | \InvalidArgumentException $e ) {
+			$error = array( 'Message' => $e->getMessage() );
 		}
-		?>
 
-		<div class="cp-connect-field-select" data-option-id="<?php echo esc_attr( $option_id ) ?>">
-			<p>This is the current query being made to Ministry Platform</p>
-			<h4>SELECT</h4>
-			<code>
-				<?php echo implode( ',', $this->get_all_group_mapping_fields() ); ?>
-			</code>
-			<p>Specify additional fields to grab</p>
-			<ul class="cp-connect-field-select__options" data-options="<?php echo htmlspecialchars( json_encode( array_values( $fields ) ), ENT_QUOTES, 'UTF-8' ); ?>"></ul>
+		$default_fields = json_encode( $this->get_default_fields( $object_type ) );
+		$initial_data   = json_encode( $this->get_custom_fields( $object_type ) );
+
+		?>
+		<div
+			class="cp-connect-field-select"
+			data-object-type="<?php echo esc_attr( $object_type ); ?>"
+			data-default-fields="<?php echo esc_attr( $default_fields ); ?>"
+		>
+			<code class="cp-connect-fields-preview"></code>
+			<br style="height: 2rem" />
+			<ul class="cp-connect-field-select__options"></ul>
 			<div class="cp-connect-field-select__add">
 				<input class="cp-connect-field-select__add-input" type="text" placeholder="Table_Name.Field_Name" />
 				<button class="cp-connect-field-select__add-button button button-primary" type="button">Add</button>
 			</div>
+			<input
+				type="hidden"
+				name="<?php echo esc_attr( $field->args['id'] ); ?>"
+				id="<?php echo esc_attr( $field->args['id'] ); ?>"
+				value="<?php echo esc_attr( $initial_data ); ?>"
+			/>
 			<!-- displays an error message if one exists -->
 			<?php if ( $error ) : ?>
 				<div>
@@ -440,47 +232,219 @@ class MinistryPlatform extends ChMS {
 				</div>
 			<?php endif; ?>
 		</div>
-		<hr>
 		<?php
 	}
 
 	/**
-	 * Get all tables to grab from the API
+	 * Get valid field names from the MP API.
+	 *
+	 * @param string $object_type The object type to get fields for.
+	 * @param string $table The MP table to check.
+	 *
+	 * @return array
 	 */
-	public function get_all_group_mapping_fields() {
-		$fields = get_option( 'ministry_platform_group_mapping' );
-		$fields = isset( $fields['fields'] ) ? $fields['fields'] : array();
+	protected function get_valid_fields( $object_type, $table ) {
+		// initialize the MP API wrapper.
+		$mp = new MP();
 
-		return array_merge( $this->get_default_group_mapping_fields(), $fields );
+		$valid_fields = array();
+
+		try {
+			$mp->authenticate();
+		} catch ( \Exception | \InvalidArgumentException $e ) {
+			return $valid_fields;
+		}
+
+		$fields = $this->get_all_fields( $object_type );
+
+		// get the list of fields from the Groups table.
+		$table = $mp->table( $table );
+
+		// gets a group from API just to verify that all specified fields exist.
+		$group = $table->select( implode( ',', $fields ) )->top( 1 )->get();
+
+		if ( $table->errorMessage() ) {
+			return $valid_fields;
+		}
+
+		if ( $group && count( $group ) > 0 ) {
+			$group = $group[0];
+		}
+
+		// adds column names from group response to the available fields.
+		if ( ! empty( $group ) ) {
+			$valid_fields = array_merge( $valid_fields, array_keys( $group ) );
+		}
+
+		return $valid_fields;
 	}
 
 	/**
-	 * Render the API configuration tab
+	 * Gets field labels for an object type.
+	 *
+	 * @param string $object_type The object type to get labels for
+	 *
+	 * @return array
 	 */
-	public function render_api_config_tab() {
-		settings_fields( 'ministry_platform_api_config_group' );
-		do_settings_sections( 'ministry_platform_api_config_tab' );
-		?>
-		<p class="submit">
-			<?php submit_button( null, 'primary', 'submit', false ); ?>
-			<?php submit_button( 'Pull Now', 'secondary', 'cp-connect-pull', false ); ?>
-		</p>
-		<?php
+	protected function get_field_labels( $object_type ) {
+		switch( $object_type ) {
+			case 'group':
+				return array(
+					'chms_id'             => 'Group ID',
+					'post_title'          => 'Group Name',
+					'post_content'        => 'Description',
+					'leader'              => 'Group Leader',
+					'start_date'          => 'Start Date',
+					'end_date'            => 'End Date',
+					'thumbnail_url'       => 'Image ID',
+					'frequency'           => 'Meeting Frequency',
+					'location'            => 'Congregation ID',
+					'city'                => 'City',
+					'state_or_region'     => 'State/Region',
+					'postal_code'         => 'Postal Code',
+					'meeting_time'        => 'Meeting Time',
+					'meeting_day'         => 'Meeting Day',
+					'cp_location'         => 'Group Campus',
+					'group_category'      => 'Group Focus',
+					'group_type'          => 'Group Type',
+					'group_life_stage'    => 'Life Stage',
+					'kid_friendly'        => 'Child Friendly',
+					'handicap_accessible' => 'Accessible',
+					'virtual'             => 'Virtual',
+				);
+			default:
+				return array();
+		}
 	}
 
 	/**
-	 * Render the Group Mapping tab
+	 * Returns any custom user-created object mappings
+	 *
+	 * @param string $object_type The object type to get mappings for
+	 *
+	 * @return array
 	 */
-	public function render_group_mapping_tab() {
-		settings_fields( 'ministry_platform_group_mapping_group' );
-		do_settings_sections( 'ministry_platform_group_mapping_tab' );
-		$this->render_custom_mappings();
-		$valid_fields = $this->valid_fields();
-		$txt_fields = json_encode( $valid_fields );
-		echo "<input type='hidden' name='ministry_platform_group_valid_fields' value='{$txt_fields}'>";
-		wp_nonce_field( 'cp-connect-mp-fields', '_cp_mp_nonce' );
-		submit_button();
+	public function get_custom_fields( $object_type ) {
+		return json_decode( $this->get_option( $object_type . '_fields', '[]' ), true );
 	}
+
+	/**
+	 * Returns all object mapping fields
+	 */
+	protected function get_all_fields( $object_type ) {
+		return array_merge( $this->get_default_fields( $object_type ), $this->get_custom_fields( $object_type ) );
+	}
+
+	/**
+	 * The default object mapping fields to fetch from the MP API
+	 *
+	 * @param string $object_type The object type to get mappings for
+	 */
+	protected function get_default_fields( $object_type ) {
+		switch( $object_type ) {
+			case 'group':
+				return array(
+					'Group_ID',
+					'Group_Name',
+					'Group_Type_ID_Table.[Group_Type]',
+					'Groups.Congregation_ID',
+					'Primary_Contact_Table.[First_Name]',
+					'Primary_Contact_Table.[Last_Name]',
+					'Groups.Description',
+					'Groups.Start_Date',
+					'Groups.End_Date',
+					'Life_Stage_ID_Table.[Life_Stage]',
+					'Group_Focus_ID_Table.[Group_Focus]',
+					'Offsite_Meeting_Address_Table.[Postal_Code]',
+					'Offsite_Meeting_Address_Table.[Address_Line_1]',
+					'Offsite_Meeting_Address_Table.[City]',
+					'Offsite_Meeting_Address_Table.[State/Region]',
+					'Meeting_Time',
+					'Meeting_Day_ID_Table.[Meeting_Day]',
+					'Meeting_Frequency_ID_Table.[Meeting_Frequency]',
+					'dp_fileUniqueId as Image_ID',
+					'Primary_Contact_Table.Display_Name',
+					'Child_Friendly_Group',
+					'Accessible',
+					'Meets_Online',
+				);
+			default:
+				return array();
+		}
+	}
+
+	/**
+	 * The default object field to MP field mapping
+	 *
+	 * @param string $object_type The object type to get mappings for
+	 *
+	 * @return array
+	 */
+	protected function get_default_object_mapping( $object_type ) {
+		switch( $object_type ) {
+			case 'group':
+				return array(
+					'chms_id'             => 'Group_ID',
+					'post_title'          => 'Group_Name',
+					'post_content'        => 'Description',
+					'leader'              => 'Display_Name',
+					'start_date'          => 'Start_Date',
+					'end_date'            => 'End_Date',
+					'thumbnail_url'       => 'Image_ID',
+					'frequency'           => 'Meeting_Frequency',
+					'city'                => 'City',
+					'state_or_region'     => 'State/Region',
+					'postal_code'         => 'Postal_Code',
+					'meeting_time'        => 'Meeting_Time',
+					'meeting_day'         => 'Meeting_Day',
+					'cp_location'         => 'Congregation_ID',
+					'group_category'      => 'Group_Focus',
+					'group_type'          => 'Group_Type',
+					'group_life_stage'    => 'Life_Stage',
+					'kid_friendly'        => 'Child_Friendly_Group',
+					'handicap_accessible' => 'Accessible',
+					'virtual'             => 'Meets_Online',
+				);
+			default:
+				return array();
+		}
+		
+	}
+
+	/**
+	 * Gets custom object mapping data
+	 *
+	 * @param string $object_type The object type to get mappings for.
+	 *
+	 * @return array
+	 */
+	protected function get_custom_object_mapping( $object_type ) {
+		$mapping_data = $this->get_option( $object_type . '_mapping', '[]' );
+		return json_decode( $mapping_data, true );
+	}
+
+	/**
+	 * Returns all fields mapped to MP data
+	 *
+	 * @param string $object_type The object type to get mappings for
+	 *
+	 * @return array
+	 */
+	protected function get_object_mapping( $object_type ) {
+		$object_key_search = $object_type . '_mapping_';
+		$settings          = get_option( $this->settings_key );
+
+		$mapping = array();
+		foreach ( $settings as $key => $value ) {
+			if ( strpos( $key, $object_key_search ) === 0 ) {
+				$key = str_replace( $object_key_search, '', $key );
+				$mapping[ $key ] = $value;
+			}
+		}
+
+		return $mapping;
+	}
+
 
 	/**
 	 * Render the custom field mappings
@@ -488,41 +452,59 @@ class MinistryPlatform extends ChMS {
 	 * @return void
 	 * @author costmo
 	 */
-	protected function render_custom_mappings() {
+	protected function display_custom_mapping_fields( $field_args, $field ) {
+		preg_match( '/^([a-z]+)_mapping$/', $field_args['id'], $matches );
 
-		$custom_fields = get_option( 'cp_group_custom_field_mapping', [] );
+		$object_type = $matches[1];
+		$table       = $field_args['table'];
 
-		$html = '';
-		if ( ! empty( $custom_fields ) && is_array( $custom_fields ) ) {
-
-			foreach ( $custom_fields as $key => $value ) {
-
-				$list = "<table class='form-table' role='presentation'><tbody><tr><td><select name='cp_connect_field_mapping_targets[]'>";
-				foreach ( array_keys( $custom_fields ) as $field ) {
-					$selected = $field === $key ? 'selected' : '';
-					$disabled = $field === 'select' ? 'disabled' : '';
-					$list .= "<option value='{$field}' {$selected} {$disabled}> {$field} </option>";
-				}
-				$list .=  "</select><span class='dashicons dashicons-dismiss'></span></td></tr></tbody></table>";
-				$html .=
-					"<div class='cp-connect-field-mapping-item-container'>
-						<input type='text' name='cp_connect_field_mapping_names[]' value='{$value}' placeholder='Field Name' />
-						{$list}
-					</div>";
-			}
+		if ( ! $object_type ) {
+			return;
 		}
 
-		$return =<<<EOT
-		<div class="cp-connect-custom-mappings">
-			{$html}
-			<div class="cp-connect-custom-mappings__last_row">
-				<i class="dashicons dashicons-plus-alt cp-connect-add-field-mapping"></i>
-			</div>
-		</div>
+		$field_template = <<<EOT
+			<template class="cp-connect-custom-mapping-template">
+				<div class="cmb-row cmb-type-select cpc-custom-mapping--row">
+					<div class="cmb-th">
+						<input type="text" placeholder="Additional Field" class="cpc-custom-mapping--meta-key regular-text" />
+					</div>
+					<div class="cmb-td">
+						<select class="cpc-custom-mapping--field-name">%s</select>
+						<button class="cpc-custom-mapping--remove button button-secondary" type="button">Remove</button>
+					</div>
+				</div>
+			</template>
 		EOT;
 
+		$options = $this->get_valid_fields( $object_type, $table );
+		$options = implode( '', array_map( function( $val ) {
+			return sprintf( '<option value="%s">%s</option>', esc_attr( $val ), esc_html( $val ) );
+		}, $options ) );
 
-		echo $return;
+		$field_template = sprintf(
+			$field_template,
+			$options
+		);
+
+		$custom_mapping_data = json_encode( $this->get_custom_object_mapping( $object_type ) );
+
+		?>
+		<div
+			class="cmb-row cmb-type-select cpc-custom-mapping"
+			data-object-type="<?php echo esc_attr( $object_type ); ?>"
+			data-mapping="<?php echo esc_attr( $custom_mapping_data ); ?>"
+			style="padding: 0;"
+		>
+			<?php echo $field_template; ?>
+			<div class="cpc-custom-mapping--rows cmb2-metabox"></div>
+			<button class="cpc-custom-mapping--add button button-primary" type="button">Add</button>
+			<input
+				type="hidden"
+				name="<?php echo esc_attr( $field_args['id'] ); ?>"
+				value="<?php echo esc_attr( $custom_mapping_data ); ?>"
+			/>
+		</div>
+		<?php
 	}
 
 	function get_option_value( $key, $options = false ) {
@@ -619,56 +601,27 @@ class MinistryPlatform extends ChMS {
 
 	/***** End API Config Callbacks *****/
 
-	/**
-	 * The callback for displaying all group mapping fields
-	 *
-	 * @param array $args
-	 *
-	 * @return void
-	 */
-	function field_mapping_callback( $args ) {
-
-		$opt = get_option( $args['option'] );
-
-		$opt = isset( $opt['mapping'] ) ? $opt['mapping'] : array();
-
-		if( ! $opt || ! isset( $opt[ $args['key'] ] ) ) {
-			$opt = $args['default_value'];
-		}
-		else {
-			$opt = $opt[ $args['key'] ];
-		}
-
-		$options = implode( '', array_map( function( $val ) use ( $opt ) {
-			$selected_att = $opt === $val ? 'selected' : '';
-			$disabled_att = $val === 'select' ? 'disabled' : '';
-
-			return sprintf( '<option %s %s>%s</option>', $selected_att, $disabled_att, esc_html( $val ) );
-		}, $args['valid_fields'] ) );
-
-		$field_name = $args['option'] . '[mapping]' . '[' . $args['key'] . ']';
-
-		$html = sprintf( '<select name="%s" value="%s">%s</select>', esc_attr( $field_name ), esc_attr( $opt ), $options );
-
-		$html .= '<label for="title"> ' . $args['description'] . '</label>';
-
-		echo $html;
-	}
-
 
 	/**
 	 * Get oAuth and API connection parameters from the database
 	 *
 	 */
 	function mpLoadConnectionParameters() {
-		// If no options available then just return - it hasn't been setup yet
-		if ( ! $options = get_option( 'ministry_platform_api_config', '' ) ) {
+		$options = array(
+			'MP_API_ENDPOINT'             => Settings::get( 'mp_api_endpoint' ),
+			'MP_OAUTH_DISCOVERY_ENDPOINT' => Settings::get( 'mp_oauth_discovery_endpoint' ),
+			'MP_CLIENT_ID'                => Settings::get( 'mp_client_id' ),
+			'MP_CLIENT_SECRET'            => Settings::get( 'mp_client_secret' ),
+			'MP_API_SCOPE'                => Settings::get( 'mp_api_scope' ),
+		);
+
+		// if there are unset options, exit
+		if ( array_filter( $options ) !== $options ) {
 			return;
 		}
 
 		foreach ( $options as $option => $value ) {
-			$envString = $option . '=' . $value;
-			putenv( $envString );
+			putenv( "$option=$value" );
 		}
 	}
 
@@ -791,9 +744,6 @@ class MinistryPlatform extends ChMS {
 	 * @param \CP_Connect\Integrations\CP_Groups $integration The integration object.
 	 */
 	public function pull_groups( $integration ) {
-
-		// TODO: Update data
-
 		$mp = new MP();
 
 		// Authenticate to get access token required for API calls
@@ -801,28 +751,25 @@ class MinistryPlatform extends ChMS {
 			return false;
 		}
 
-		$filter = apply_filters( 'cp_connect_chms_mp_groups_filter', "Groups.End_Date >= getdate() OR Groups.End_Date IS NULL" );
+		$filter_query = 'Groups.End_Date >= getdate() OR Groups.End_Date IS NULL';
+		$filter       = apply_filters( 'cp_connect_chms_mp_groups_filter', $filter_query );
 
-		$fields = $this->get_all_group_mapping_fields();
-
-		$table = $mp->table( 'Groups' );
+		$fields = $this->get_all_fields( 'group' );
+		$table  = $mp->table( 'Groups' );
 		$groups = $table
 								->select( implode( ',', $fields ) )
 								->filter( $filter )
-								// ->top(10)
 								->get();
 
 		if( $table->errorMessage() ) {
 			return false;
 		}
 
-		$group_mapping = get_option( 'ministry_platform_group_mapping' );
-		$group_mapping = isset( $group_mapping['mapping'] ) ? $group_mapping['mapping'] : $this->get_default_group_mapping();
+		$group_mapping       = $this->get_object_mapping( 'group' );
+		$custom_mappings     = $this->get_custom_object_mapping( 'group' );
+		$custom_mapping_data = array();
 
 		$formatted = [];
-
-		$custom_mappings = get_option( 'cp_group_custom_field_mapping', [] );
-		$custom_mapping_data = array();
 
 		foreach ( $groups as $group ) {
 			$mapped_values = $this->get_mapped_values( $group, $group_mapping );
