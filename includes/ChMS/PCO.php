@@ -871,6 +871,10 @@ class PCO extends ChMS {
 
 		foreach ( $group['relationships'] as $relationship ) {
 			foreach ( $included as $include ) {
+				if ( empty( $include['id'] ) || empty( $relationship['data'] ) || empty( $relationship['data']['id'] ) ) {
+					continue;
+				}
+
 				if ( $include['id'] == $relationship['data']['id'] ) {
 					$details[] = $include;
 				}
@@ -896,7 +900,7 @@ class PCO extends ChMS {
 			$this->api()
 				->module('groups')
 				->table('groups')
-				->includes('location,group_type')
+				->includes('location,group_type,enrollment')
 				->get();
 
 		if( !empty( $this->api()->errorMessage() ) ) {
@@ -914,8 +918,35 @@ class PCO extends ChMS {
 
 		$formatted = [];
 
+		$enrollment_status = $this->get_option( 'groups_enrollment_status', [ 'open' ] );
+		$enrollment_strategies = $this->get_option( 'groups_enrollment_strategy', [ 'open_signup', 'request_to_join' ] );
+
 		$counter = 0;
 		foreach( $items as $group ) {
+
+			$include    = true;
+			$enrollment = $this->get_relationship_data( 'enrollment', $group, $raw );
+
+			if ( ! empty( $enrollment_status ) || ! empty( $enrollment_strategies ) ) {
+				$include = false;
+
+				foreach ( $enrollment as $e ) {
+					if ( empty( $e['strategy'] ) ) {
+						continue;
+					}
+
+					$strategy_check = empty( $enrollment_strategies ) || in_array( $e['strategy'], $enrollment_strategies );
+					$status_check   = empty( $enrollment_status ) || in_array( $e['status'], $enrollment_status );
+
+					if ( $strategy_check && $status_check ) {
+						$include = true;
+					}
+				}
+			}
+
+			if ( ! $include ) {
+				continue;
+			}
 
 			$start_date = strtotime( $group['attributes']['created_at'] ?? null );
 			$end_date   = strtotime( $group['attributes']['archived_at'] ?? null );
@@ -944,12 +975,17 @@ class PCO extends ChMS {
 
 			$item_details = $this->pull_group_details( $group, $raw['included'] );
 
+			$is_visible = true;
 			foreach( $item_details as $index => $item_data ) {
 
 				$type = $item_data['type'] ?? '';
 
 				if( 'GroupType' === $type ) {
 					$args['group_type'][] = $item_data['attributes']['name'] ?? '';
+
+					if ( empty( $item_data['attributes']['church_center_visible'] ) ) {
+						$is_visible = false;
+					}
 				} else if( 'Location' === $type ) {
 					// TODO: Maybe pull location information from $group['relationships']['location']['data']['id']
 					if ( 'exact' == $item_data['attributes']['display_preference'] )  {
@@ -958,6 +994,10 @@ class PCO extends ChMS {
 						$args['meta_input']['location'] = $item_data['attributes']['name'] ?? '';
 					}
 				}
+			}
+
+			if ( ! $is_visible ) {
+				continue;
 			}
 
 			// TODO: Look this up
@@ -1101,6 +1141,33 @@ class PCO extends ChMS {
 			'options' => [
 				1 => __( 'Pull from Groups', 'cp-library' ),
 				0 => __( 'Do not pull', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
+			'name'    => __( 'Group Enrollment Status' ),
+			'desc'    => __( 'Select the enrollment status options to include in the group sync.', 'cp-connect' ),
+			'id'      => 'groups_enrollment_status',
+			'type'    => 'multicheck',
+			'default' => [ 'open' ],
+			'options' => [
+				'open'    => __( 'Open - strategy is not closed and no limits have been reached', 'cp-library' ),
+				'closed'  => __( 'Closed - strategy is closed or limits have been reached', 'cp-library' ),
+				'full'    => __( 'Full - member limit has been reached', 'cp-library' ),
+				'private' => __( 'Private - group is unlisted', 'cp-library' ),
+			]
+		) );
+
+		$settings->add_field( array(
+			'name'    => __( 'Group Enrollment Strategy' ),
+			'desc'    => __( 'Select the enrollment strategy options to include in the group sync.', 'cp-connect' ),
+			'id'      => 'groups_enrollment_strategy',
+			'type'    => 'multicheck_inline',
+			'default' => [ 'request_to_join', 'open_signup' ],
+			'options' => [
+				'request_to_join' => __( 'Request to Join', 'cp-library' ),
+				'open_signup'     => __( 'Open Signup', 'cp-library' ),
+				'closed'          => __( 'Closed', 'cp-library' ),
 			]
 		) );
 	}
