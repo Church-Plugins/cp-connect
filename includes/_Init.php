@@ -100,6 +100,7 @@ class _Init {
 		ChMS\_Init::get_instance();
 		Integrations\_Init::get_instance();
 		$this->setup = Setup\_Init::get_instance();
+		VersionUpdate::get_instance();
 	}
 
 	protected function actions() {}
