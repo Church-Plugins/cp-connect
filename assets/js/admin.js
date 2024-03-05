@@ -1,31 +1,58 @@
 
-
 jQuery($ => {
+
+	const debounce = (cb, delay) => {
+		let timeout
+		return (...args) => {
+			clearTimeout(timeout)
+			timeout = setTimeout(() => cb(...args), delay)
+		}
+	}	
 
 	$('.cp-connect-field-select').each(buildMultiSelect)
 
 	function buildMultiSelect() {
 		const optionsContainer = $(this).find('.cp-connect-field-select__options')
-		const addFieldInput = $(this).find('.cp-connect-field-select__add-input')
-		const addFieldButton = $(this).find('.cp-connect-field-select__add-button')
-		const optionId = $(this).data('option-id')
+		const addFieldInput    = $(this).find('.cp-connect-field-select__add-input')
+		const addFieldButton   = $(this).find('.cp-connect-field-select__add-button')
+		const hiddenField      = $(this).find('input[type="hidden"]')
+		const fieldsPreview    = $(this).find('.cp-connect-fields-preview')
+		const defaultFields    = $(this).data('default-fields')
 
-		let options = Object.values( optionsContainer.data('options') || {} )
+		let options = JSON.parse(hiddenField.val() || '[]')
 
-		updateList()
+		const updateValue = debounce(() => {
+			options = optionsContainer.find('.cp-connect-field-select-item-value').map((i, e) => $(e).val()).toArray()
+			hiddenField.val(JSON.stringify(options))
+			fieldsPreview.html([...defaultFields, ...options].join(', ')) // update field preview
+		}, 300)
+
+		// prevent submitting form on enter
+		addFieldInput.on( 'keypress', e => {
+			if ( e.keyCode === 13 ) {
+				e.preventDefault()
+				addFieldButton.click()
+			}
+		} )
 
 		addFieldButton.on('click', e => {
 			const value = addFieldInput.val()
 			if ( value ) {
 				options.push(value)
 				updateList()
+				updateValue()
 				addFieldInput.val('')
 			}
 		})
 
+		setTimeout(() => {
+			updateList()
+			updateValue()
+		}, 10)
+
 		function updateList() {
 			const listItemTemplate = `<li class="cp-connect-field-select-item">
-				<input class="cp-connect-field-select-item-value" name="${optionId}[fields][{value}]" type="text" value="{value}" />
+				<input class="cp-connect-field-select-item-value regular-text" type="text" value="{value}" />
 				<button class="cp-connect-field-select-item-remove button button-secondary"><i class="material-icons">delete</i></button>
 			</li>`;
 
@@ -34,9 +61,17 @@ jQuery($ => {
 			options.forEach(value => {
 				const elem = $(listItemTemplate.replaceAll('{value}', value))
 
-				elem.find('.cp-connect-field-select-item-remove').on('click', e => {
+				elem.find('.cp-connect-field-select-item-value').on('keypress', (e) => {
+					if(e.keyCode === 13) {
+						e.preventDefault()
+					} else {
+						updateValue()
+					}
+				})
+
+				elem.find('.cp-connect-field-select-item-remove').on('click', () => {
 					elem.remove()
-					options = options.filter(v => v !== value)
+					updateValue()
 				})
 
 				optionsContainer.append(elem)
@@ -44,75 +79,66 @@ jQuery($ => {
 		}
 	}
 
-	/**
-	 * Bind event handlers to elements that are added to the DOM in real time
-	 */
-	let bindItems = () => {
+	$('.cpc-custom-mapping').each(buildCustomMapping)
 
-		$( '.cp-connect-custom-mappings span.dashicons-dismiss' ).each(
-			( index, element ) => {
+	function buildCustomMapping() {
+		const optionTemplate = $(this).find('.cp-connect-custom-mapping-template')
+		const initialMapping = $(this).data('mapping')
+		const objectType     = $(this).data('object-type')
+		const itemContainer  = $(this).find('.cpc-custom-mapping--rows')
+		const addItemBtn     = $(this).find('.cpc-custom-mapping--add')
+		const hiddenField    = $(this).find('input[type="hidden"]')
+		
+		let currentMapping  = initialMapping
 
-				$( element ).off( 'click' ).on( 'click', ( event ) => {
+		const updateValue = debounce(() => {
+			const newState = {}
+			itemContainer.find('.cpc-custom-mapping--row').each(function() {
+				const metaKey   = $(this).find('.cpc-custom-mapping--meta-key').val()
+				const fieldName = $(this).find('.cpc-custom-mapping--field-name').val()
+				newState[fieldName] = metaKey
+			})
+			currentMapping = newState
+			hiddenField.val(JSON.stringify(currentMapping))
+		}, 300)
 
-					event.preventDefault();
-					let target = $( element ).parents( '.cp-connect-field-mapping-item-container' )[0];
-					$( target ).remove();
+		const addRow = (fieldName = '', metaKey = '', ) => {
+			const row = $(optionTemplate.clone().html())
+			
+			const metaKeyField   = row.find('.cpc-custom-mapping--meta-key')
+			const fieldNameField = row.find('.cpc-custom-mapping--field-name')
+			const removeBtn      = row.find('.cpc-custom-mapping--remove')
 
-				} );
-			}
-		);
+			metaKeyField.val(metaKey)
+			fieldNameField.val(fieldName)
 
-	};
+			metaKeyField.on('keypress', (e) => {
+				if(e.keyCode === 13) {
+					e.preventDefault()
+				} else {
+					updateValue()
+				}
+			})
 
-	/**
-	 * Add a new field mapping
-	 *
-	 * unbind and rebind to `click` event to prevent multiple calls
-	 */
-	$( '.cp-connect-add-field-mapping' )
-		.off('click')
-		.on( 'click',
-			( event ) => {
+			fieldNameField.on('change', (e) => {
+				updateValue()
+			})
 
-				event.preventDefault();
+			removeBtn.on('click', (e) => {
+				e.preventDefault()
+				row.remove()
+				updateValue()
+			})
 
-				let rawFieldData = JSON.parse( $( 'input[name="ministry_platform_group_valid_fields"]' ).val() );
+			itemContainer.append(row)
+		}
 
-				let list = '<table class="form-table" role="presentation"><tbody><tr><td><select name="cp_connect_field_mapping_targets[]">';
-				$( rawFieldData ).each(
-					( index, value ) => {
+		addItemBtn.off('click').on('click', () => {
+			addRow()
+		})
 
-						if( 'select' === value ) {
-							list += '<option disabled> ' + value + ' </option>';
-						} else {
-							list += '<option> ' + value + ' </option>';
-						}
-
-					}
-				);
-				list += '</select><span class="dashicons dashicons-dismiss"></span></td></tr></tbody></table>';
-
-				let newItem =
-					'<div class="cp-connect-field-mapping-item-container">' +
-						'<input type="text" name="cp_connect_field_mapping_names[]" value="" placeholder="Field Name" />' +
-						list +
-					'</div>';
-
-				let target = $( '.cp-connect-custom-mappings .cp-connect-custom-mappings__last_row' );
-				$( newItem ).insertBefore( $( target ) );
-
-				setTimeout(
-					() => {
-						bindItems();
-					}, 200
-				);
-
-			}
-	);
-
-	setTimeout(
-		() => {
-			bindItems();
-		}, 200
-	);
+		if( initialMapping && Object.keys(initialMapping).length > 0 ) {
+			Object.entries(initialMapping).forEach(([fieldName, metaKey]) => addRow(fieldName, metaKey))
+		}
+	}
 })
