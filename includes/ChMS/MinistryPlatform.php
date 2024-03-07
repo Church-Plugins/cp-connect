@@ -198,7 +198,7 @@ class MinistryPlatform extends ChMS {
 			$table->select( implode( ',', $this->get_all_fields( $object_type ) ) )->top( 1 )->get();
 
 			$error = $table->errorMessage() ? json_decode( (string) $table->errorMessage(), true ) : false;
-		} catch ( \Exception | \InvalidArgumentException $e ) {
+		} catch ( \Exception | \InvalidArgumentException | \Error $e ) {
 			$error = array( 'Message' => $e->getMessage() );
 		}
 
@@ -261,9 +261,14 @@ class MinistryPlatform extends ChMS {
 		$table = $mp->table( $table );
 
 		// gets a group from API just to verify that all specified fields exist.
-		$group = $table->select( implode( ',', $fields ) )->top( 1 )->get();
 
-		if ( $table->errorMessage() ) {
+		try {
+			$group = $table->select( implode( ',', $fields ) )->top( 1 )->get();
+		} catch ( \Exception | \InvalidArgumentException | \Error $e ) {
+			$group = false;
+		}
+
+		if ( $table->errorMessage() || ! $group ) {
 			return $valid_fields;
 		}
 
