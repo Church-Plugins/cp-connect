@@ -41,7 +41,7 @@ class _Init {
 	 */
 	protected function __construct() {
 		$this->enqueue = new \WPackio\Enqueue( 'cpConnect', 'dist', $this->get_version(), 'plugin', CP_CONNECT_PLUGIN_FILE );
-		add_action( 'plugins_loaded', [ $this, 'maybe_setup' ], - 9999 );
+		add_action( 'cp_core_loaded', [ $this, 'maybe_setup' ], - 9999 );
 		add_action( 'init', [ $this, 'maybe_init' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'admin_enqueue' ] );
 	}

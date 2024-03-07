@@ -5,13 +5,23 @@ namespace CP_Connect\Admin;
 /**
  * Plugin settings
  *
+ * @since 1.0.0
  */
 class Settings {
 
 	/**
-	 * @var
+	 * Class instance.
+	 *
+	 * @var Settings
 	 */
-	protected static $_instance;
+	protected static $instance;
+
+	/**
+	 * License manager.
+	 *
+	 * @var \ChurchPlugins\Setup\Admin\License
+	 */
+	public $license;
 
 	/**
 	 * Only make one instance of \CP_Connect\Settings
@@ -19,19 +29,19 @@ class Settings {
 	 * @return Settings
 	 */
 	public static function get_instance() {
-		if ( ! self::$_instance instanceof Settings ) {
-			self::$_instance = new self();
+		if ( ! self::$instance instanceof Settings ) {
+			self::$instance = new self();
 		}
 
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**
 	 * Get a value from the options table
 	 *
-	 * @param $key
-	 * @param $default
-	 * @param $group
+	 * @param string $key Option key.
+	 * @param mixed  $default Default value.
+	 * @param string $group Option group.
 	 *
 	 * @return mixed|void
 	 * @since  1.0.0
@@ -50,6 +60,13 @@ class Settings {
 		return apply_filters( 'cpc_settings_get', $value, $key, $group );
 	}
 
+	/**
+	 * Update an option in the options table.
+	 *
+	 * @param string $key Option key.
+	 * @param mixed  $value Option value.
+	 * @param string $group Option group.
+	 */
 	public static function set( $key, $value, $group = 'cpc_main_options' ) {
 		$options = get_option( $group, [] );
 
@@ -61,8 +78,8 @@ class Settings {
 	/**
 	 * Get advanced options
 	 *
-	 * @param $key
-	 * @param $default
+	 * @param string $key Option key.
+	 * @param mixed  $default Default value.
 	 *
 	 * @return mixed|void
 	 * @since  1.0.0
@@ -75,138 +92,52 @@ class Settings {
 
 	/**
 	 * Class constructor. Add admin hooks and actions
-	 *
 	 */
 	protected function __construct() {
-		add_action( 'cmb2_admin_init', [ $this, 'register_main_options_metabox' ] );
-		add_action( 'cmb2_save_options_page_fields', 'flush_rewrite_rules' );
+		add_action( 'admin_menu', [ $this, 'settings_page' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
+
+		\ChurchPlugins\Admin\Options::register_rest_route( 'cp-connect/v1', 'cpc_' );
+
+		$this->license = new \ChurchPlugins\Setup\Admin\License( 'cpc_license', 438, CP_CONNECT_STORE_URL, CP_CONNECT_PLUGIN_FILE, get_admin_url( null, 'admin.php?page=cpc_license' ) );
 	}
-
-	public function register_main_options_metabox() {
-
-		/**
-		 * Registers main options page menu item and form.
-		 */
-		$args = array(
-			'id'           => 'cpc_main_options_page',
-			'title'        => 'CP Connect',
-			'object_types' => array( 'options-page' ),
-			'option_key'   => 'cpc_main_options',
-			'tab_group'    => 'cpc_main_options',
-			'tab_title'    => 'ChMS',
-			'parent_slug'  => 'options-general.php',
-			'display_cb'   => [ $this, 'options_display_with_tabs'],
-		);
-
-		$main_options = new_cmb2_box( $args );
-
-		/**
-		 * Options fields ids only need
-		 * to be unique within this box.
-		 * Prefix is not needed.
-		 */
-		$main_options->add_field( array(
-			'name'    => __( 'Select your ChMS', 'cp-connect' ),
-			'id'      => 'chms',
-			'type'    => 'select',
-			'options' => [
-				''    => '-- Select --',
-				'ccb' => 'Church Community Builder',
-				'pco' => 'Planning Center Online',
-				'mp'  => 'Ministry Platform',
-			],
-		) );
-
-		do_action( 'cpc_main_options_metabox', $main_options );
-
-		$main_options->add_field( array(
-			'name'    => __( 'Pull Now', 'cp-connect' ),
-			'id'      => 'pull_now',
-			'type'    => 'checkbox',
-			'desc'    => __( 'Check this box to pull data from your ChMS now.', 'cp-connect' ),
-		) );
-
-		do_action( 'cpc_main_options_tabs' );
-
-		$this->license_fields();
-
-	}
-
-	protected function license_fields() {
-		$license = new \ChurchPlugins\Setup\Admin\License( 'cpc_license', 438, CP_CONNECT_STORE_URL, CP_CONNECT_PLUGIN_FILE, get_admin_url( null, 'admin.php?page=cpc_license' ) );
-
-		/**
-		 * Registers settings page, and set main item as parent.
-		 */
-		$args = array(
-			'id'           => 'cpc_options_page',
-			'title'        => 'CP Connect Settings',
-			'object_types' => array( 'options-page' ),
-			'option_key'   => 'cpc_license',
-			'parent_slug'  => 'cpc_main_options',
-			'tab_group'    => 'cpc_main_options',
-			'tab_title'    => 'License',
-			'display_cb'   => [ $this, 'options_display_with_tabs' ]
-		);
-
-		$options = new_cmb2_box( $args );
-		$license->license_field( $options );
-	}
-
-
 
 	/**
-	 * A CMB2 options-page display callback override which adds tab navigation among
-	 * CMB2 options pages which share this same display callback.
+	 * Initializes the settings page.
 	 *
-	 * @param \CMB2_Options_Hookup $cmb_options The CMB2_Options_Hookup object.
+	 * @since 1.1.0
 	 */
-	public function options_display_with_tabs( $cmb_options ) {
-		$tabs = $this->options_page_tabs( $cmb_options );
+	public function settings_page() {
+		add_submenu_page(
+			'options-general.php',
+			__( 'Settings', 'cp-connect' ),
+			__( 'CP Connect', 'cp-connect' ),
+			'manage_options',
+			'cpc_settings',
+			[ $this, 'settings_page_content' ]
+		);
+	}
+
+	/**
+	 * Outputs the settings react entrypoint.
+	 */
+	public function settings_page_content() {
 		?>
-		<div class="wrap cmb2-options-page option-<?php echo $cmb_options->option_key; ?>">
-			<?php if ( get_admin_page_title() ) : ?>
-				<h2><?php echo wp_kses_post( get_admin_page_title() ); ?></h2>
-			<?php endif; ?>
-			<h2 class="nav-tab-wrapper">
-				<?php foreach ( $tabs as $option_key => $tab_title ) : ?>
-					<a class="nav-tab<?php if ( isset( $_GET['page'] ) && $option_key === $_GET['page'] ) : ?> nav-tab-active<?php endif; ?>"
-					   href="<?php menu_page_url( $option_key ); ?>"><?php echo wp_kses_post( $tab_title ); ?></a>
-				<?php endforeach; ?>
-			</h2>
-			<form class="cmb-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="POST"
-				  id="<?php echo $cmb_options->cmb->cmb_id; ?>" enctype="multipart/form-data"
-				  encoding="multipart/form-data">
-				<input type="hidden" name="action" value="<?php echo esc_attr( $cmb_options->option_key ); ?>">
-				<?php $cmb_options->options_page_metabox(); ?>
-				<?php submit_button( esc_attr( $cmb_options->cmb->prop( 'save_button' ) ), 'primary', 'submit-cmb' ); ?>
-			</form>
-		</div>
+		<div class="cp_settings_root cp-connect"></div>
 		<?php
 	}
 
 	/**
-	 * Gets navigation tabs array for CMB2 options pages which share the given
-	 * display_cb param.
+	 * Enqueue scripts and styles for the settings page.
 	 *
-	 * @param \CMB2_Options_Hookup $cmb_options The CMB2_Options_Hookup object.
-	 *
-	 * @return array Array of tab information.
+	 * @since 1.1.0
 	 */
-	public function options_page_tabs( $cmb_options ) {
-		$tab_group = $cmb_options->cmb->prop( 'tab_group' );
-		$tabs      = array();
-
-		foreach ( \CMB2_Boxes::get_all() as $cmb_id => $cmb ) {
-			if ( $tab_group === $cmb->prop( 'tab_group' ) ) {
-				$tabs[ $cmb->options_page_keys()[0] ] = $cmb->prop( 'tab_title' )
-					? $cmb->prop( 'tab_title' )
-					: $cmb->prop( 'title' );
-			}
+	public function enqueue_scripts() {
+		$screen = get_current_screen();
+		if ( 'settings_page_cpc_settings' !== $screen->id ) {
+			return;
 		}
-
-		return $tabs;
+		\ChurchPlugins\Helpers::enqueue_asset( 'admin-settings' );
+		\ChurchPlugins\Helpers::enqueue_asset( 'admin-settings', [], false, true );
 	}
-
-
 }
