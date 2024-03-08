@@ -41,6 +41,7 @@ const labels = {
 
 function MPFields({ data, updateField }) {
 	const [fieldError, setFieldError] = useState(null)
+	const [inputValue, setInputValue] = useState('')
 	const api = useApi()
 
 	const { group_fields } = data
@@ -68,6 +69,17 @@ function MPFields({ data, updateField }) {
 				value={group_fields}
 				onChange={(_, value) => {
 					updateField('group_fields', value.map(v => typeof v === 'string' ? v : v.value))
+				}}
+				inputValue={inputValue}
+				onInputChange={(e, value) => {
+					const options = value.split(',').map(v => v.trim()).filter(v => v.length)
+
+					if(options.length > 1 || value.endsWith(',')) {
+						updateField('group_fields', group_fields.concat(options))
+						setInputValue('')
+					} else {
+						setInputValue(value)
+					}
 				}}
 				options={[]}
 				freeSolo
@@ -110,6 +122,7 @@ function MPFields({ data, updateField }) {
 }
 
 export default function ConfigureTab({ data, updateField }) {
+	const api = useApi()
 	const [newLabel, setNewLabel] = useState('')
 	const [newValue, setNewValue] = useState('')
 	const [addingCustomField, setAddingCustomField] = useState(false)
@@ -119,7 +132,7 @@ export default function ConfigureTab({ data, updateField }) {
 
 	const {
 		group_field_mapping,
-		custom_field_mapping,
+		custom_group_field_mapping,
 		group_fields,
 		custom_fields,
 		valid_fields = []
@@ -130,20 +143,24 @@ export default function ConfigureTab({ data, updateField }) {
 	const updateMappingField = (key, value) => {
 		const newMapping = { ...group_field_mapping }
 		newMapping[key] = value
+
+		console.log('updating mapping', newMapping, key, value)
+
 		updateField('group_field_mapping', newMapping)
 	}
 
 	const createCustomMappingField = (name, value) => {
 		const slug = name.toLowerCase().replace(/[\s\-]/g, '_').replace(/[^\w]/g, '')
-		const newMapping = { ...custom_field_mapping }
+		const newMapping = { ...custom_group_field_mapping }
 		newMapping[slug] = { name, value }
-		updateField('custom_field_mapping', newMapping)
+		updateField('custom_group_field_mapping', newMapping)
 	}
 
 	const updateCustomMappingField = (key, { name, value }) => {
-		const newMapping = { ...custom_field_mapping }
+		const newMapping = { ...custom_group_field_mapping }
 		newMapping[key] = { name, value }
-		updateField('custom_field_mapping', newMapping)
+		console.log('updating custom mapping', newMapping, key, name, value)
+		updateField('custom_group_field_mapping', newMapping)
 	}
 
 	const startImport = () => {
@@ -154,12 +171,27 @@ export default function ConfigureTab({ data, updateField }) {
 			data: {}
 		}).then((response) => {
 			setImportStarted(true)
-			console.log(response)
 		}).catch((e) => {
 			setImportError(e.message)
 		}).finally(() => {
 			setImportPending(false)
 		})
+	}
+
+	if (!api) {
+		return (
+			<Box>
+				{__( 'Authenticating with Ministry Platform...', 'cp-connect' )}
+			</Box>
+		)
+	}
+
+	if(api && !api.isAuthenticated()) {
+		return (
+			<Alert severity="warning">
+				{__( 'You need to authenticate with Ministry Platform to test fields.', 'cp-connect' )}
+			</Alert>
+		)
 	}
 
 	return (
@@ -178,26 +210,24 @@ export default function ConfigureTab({ data, updateField }) {
 			<Typography variant="h5">{ __( 'Field mapping',	'cp-connect' ) }</Typography>
 			{Object.entries(labels).map(([key, label]) => (
 				<FormControl key={key}>
-					<InputLabel id={`${key}-label`}>{label}</InputLabel>
-					<Select
-						labelId={`${key}-label`}
-						label={label}
+					<Autocomplete
 						value={data.group_field_mapping[key] || ''}
-						onChange={(e) => updateMappingField(key, e.target.value)}
+						onChange={(e, option) => {
+							updateMappingField(key, option?.value || '')
+						}}
 						sx={{ width: '300px' }}
-					>
-						<MenuItem value="">--Ignore--</MenuItem>
-						{
-							valid_fields.map((field) => (
-								<MenuItem key={field} value={field}>{field}</MenuItem>
-							))
-						}
-					</Select>
+						options={[
+							{ label: '--Ignore--', value: '' },
+							...valid_fields.map((field) => ({ label: field, value: field }))
+						]}
+						renderInput={(params) => <TextField {...params} label={label} variant="outlined" />}
+						isOptionEqualToValue={(option, value) => option.value === value}
+					/>
 				</FormControl>
 			))}
 
 			<Typography variant="h5">{ __( 'Custom field mapping', 'cp-connect' ) }</Typography>
-			{Object.entries(custom_field_mapping).map(([key, { name, value }]) => (
+			{Object.entries(custom_group_field_mapping).map(([key, { name, value }]) => (
 				<Box key={key} display="flex" gap={1} alignItems="center">
 					<TextField
 						label={__( 'Field Name', 'cp-connect' )}
@@ -206,22 +236,14 @@ export default function ConfigureTab({ data, updateField }) {
 						variant="outlined"
 						sx={{ width: '300px' }}
 					/>
-					<FormControl>
-						<InputLabel id={`${key}-label`}>{__( 'Field', 'cp-connect' )}</InputLabel>
-						<Select
-							labelId={`${key}-label`}
-							label={__( 'Field', 'cp-connect' )}
-							value={value}
-							onChange={(e) => updateCustomMappingField(key, { name, value: e.target.value })}
-							sx={{ width: '300px' }}
-						>
-							{
-								allFields.map((field) => (
-									<MenuItem key={field} value={field}>{field}</MenuItem>
-								))
-							}
-						</Select>
-					</FormControl>
+					<Autocomplete
+						value={value}
+						onChange={(e, option) => updateCustomMappingField(key, { name, value: option?.value || '' })}
+						sx={{ width: '300px' }}
+						options={valid_fields.map((field) => ({ label: field, value: field }))}
+						renderInput={(params) => <TextField {...params} label={__( 'Field', 'cp-connect' )} variant="outlined" />}
+						isOptionEqualToValue={(option, value) => option.value === value}
+					/>
 				</Box>
 			))}
 
@@ -234,20 +256,14 @@ export default function ConfigureTab({ data, updateField }) {
 						onChange={(e) => setNewLabel(e.target.value)}
 					/>
 					<FormControl>
-						<InputLabel id="add-custom-field-label">{__( 'Field', 'cp-connect' )}</InputLabel>
-						<Select
-							labelId="add-custom-field-label"
-							label={__( 'Field', 'cp-connect' )}
+						<Autocomplete
 							value={newValue}
-							onChange={(e) => setNewValue(e.target.value)}
-							sx={{ width: '200px' }}
-						>
-							{
-								allFields.map((field) => (
-									<MenuItem key={field} value={field}>{field}</MenuItem>
-								))
-							}
-						</Select>
+							onChange={(e, option) => setNewValue(option?.value || '')}
+							sx={{ width: '300px' }}
+							options={valid_fields.map((field) => ({ label: field, value: field }))}
+							renderInput={(params) => <TextField {...params} label={__( 'Field', 'cp-connect' )} variant="outlined" />}
+							isOptionEqualToValue={(option, value) => option.value === value}
+						/>
 					</FormControl>
 					<Button
 						onClick={() => {

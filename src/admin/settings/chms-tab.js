@@ -18,8 +18,10 @@ function ChMSTab({ data, updateField }) {
 					label={__( 'ChMS', 'cp-connect' )}
 					value={chms}
 					onChange={(e) => updateField('chms', e.target.value)}
+					placeholder={__( 'Select', 'cp-connect' )}	
+					sx={{ minWidth: "300px" }}
 				>
-					<MenuItem value="">{__( 'Select', 'cp-connect' )}</MenuItem>
+					<MenuItem value="" sx={{ opacity: 0.5 }} >{__( 'Select', 'cp-connect' )}</MenuItem>
 					{Object.keys(platforms).map((key) => (
 						<MenuItem key={key} value={key}>{platforms[key].name}</MenuItem>
 					))}

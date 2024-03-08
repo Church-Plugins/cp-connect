@@ -757,7 +757,7 @@ class MinistryPlatform extends ChMS {
 
 		// format the custom mapping data
 		$custom_mapping_option = Settings::get( 'custom_group_field_mapping', array(), 'cpc_mp_configuration' );
-		$custom_mapping       = array();
+		$custom_mapping        = array();
 		foreach ( $custom_mapping_option as $key => $data ) {
 			$custom_mapping[ $data['value'] ] = $data['name'];
 		}

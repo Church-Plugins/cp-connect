@@ -6,14 +6,6 @@ import { __ } from '@wordpress/i18n';
 import Api from './api';
 import { useState } from '@wordpress/element';
 
-// defaultData: {
-// 	api_endpoint: '',
-// 	oauth_discovery_endpoint: '',
-// 	client_id: '',
-// 	client_secret: '',
-// 	api_scope: '',
-// }
-
 export default function ConnectTab({ data, updateField, isDirty }) {
 	const [authSuccess, setAuthSuccess] = useState(false)
 	const [authError, setAuthError] = useState(null)

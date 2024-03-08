@@ -26,7 +26,7 @@ export default {
 				group_fields: [],
 				custom_fields: [],
 				group_field_mapping: {},
-				custom_field_mapping: {},
+				custom_group_field_mapping: {},
 			}
 		}
 	]

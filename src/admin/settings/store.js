@@ -6,7 +6,7 @@ const INITIAL_STATE = {
 	optionGroups: {},
 	error: null,
 	isSaving: false,
-	isDirty: false
+	dirtyGroups: {}
 }
 
 const actions = {
@@ -40,7 +40,7 @@ const actions = {
 		}
 
 		if ( response ) {
-			return { type: 'OPTIONS_UPDATE_SUCCESS', data: response }
+			return { type: 'OPTIONS_UPDATE_SUCCESS', data: response, group }
 		}
 
 		return { type: 'OPTIONS_UPDATE_ERROR', message: __( 'Settings were not saved.', 'cp-locations' ) }
@@ -57,14 +57,20 @@ const optionsStore = createReduxStore( 'cp-locations/options', {
 						...state.optionGroups,
 						[ action.group ]: action.data
 					},
-					isDirty: action.hydrate ? false : true
+					dirtyGroups: {
+						...state.dirtyGroups,
+						[ action.group ]: action.hydrate ? false : true
+					}
 				}
 			case 'OPTIONS_UPDATE_SUCCESS':
 				return {
 					...state,
 					error: null,
 					isSaving: false,
-					isDirty: false
+					dirtyGroups: {
+						...state.dirtyGroups,
+						[ action.group ]: false
+					}
 				}
 			case 'OPTIONS_UPDATE_ERROR':
 				return {
@@ -87,7 +93,7 @@ const optionsStore = createReduxStore( 'cp-locations/options', {
 			return state.optionGroups[ group ];
 		},
 		isSaving: ( state ) => state.isSaving,
-		isDirty: ( state ) => state.isDirty,
+		isDirty: ( state, group ) => state.dirtyGroups[ group ],
 		getError: ( state ) => state.error
 	},
 	controls: {

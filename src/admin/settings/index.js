@@ -1,4 +1,4 @@
-import { createRoot, useState, useEffect } from '@wordpress/element';
+import { createRoot, useState, useEffect, useRef } from '@wordpress/element';
 import './index.scss';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -27,6 +27,7 @@ const theme = createTheme({
 
 function DynamicTab({ tab, prefix }) {
 	const { optionGroup, defaultData, component } = tab
+	const isDirtyRef = useRef(false)
 
 	const prefixedOptionGroup = prefix ? `${prefix}_${optionGroup}` : optionGroup
 
@@ -35,7 +36,7 @@ function DynamicTab({ tab, prefix }) {
 			data: select(optionsStore).getOptionGroup(prefixedOptionGroup),
 			isSaving: select(optionsStore).isSaving(),
 			error: select(optionsStore).getError(),
-			isDirty: select(optionsStore).isDirty(),
+			isDirty: select(optionsStore).isDirty(prefixedOptionGroup),
 			isHydrating: select(optionsStore).isResolving( 'getOptionGroup', [ prefixedOptionGroup ] )
 		}
 	}, [prefixedOptionGroup])
@@ -52,6 +53,25 @@ function DynamicTab({ tab, prefix }) {
 	const save = () => {
 		persistOptionGroup(prefixedOptionGroup, data)
 	}
+
+	useEffect(() => {
+		isDirtyRef.current = isDirty
+	}, [isDirty])
+
+	const handleBeforeUnload = (e) => {
+		if (isDirtyRef.current) {
+			e.preventDefault()
+			return false;
+		}
+	}
+
+	useEffect(() => {
+		window.addEventListener('beforeunload', handleBeforeUnload)
+
+		return () => {
+			window.removeEventListener('beforeunload', handleBeforeUnload)
+		}
+	}, [])
 
 	return (
 		<Box>

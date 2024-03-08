@@ -60,6 +60,8 @@ class Api {
 		.then(response => response.json())
 		
 		if (tokenData.error) {
+			localStorage.removeItem('mp_access_token')
+			localStorage.removeItem('mp_token_expires')
 			throw new Error(`Authentication failed: ${tokenData.error_description}`)
 		}
 
@@ -81,9 +83,9 @@ class Api {
 	}
 
 	async getGroups(config) {
-		if(!this.isAuthenticated()) {
-			await this.authenticate()
-		}
+		await this.authenticate()
+
+		console.log("Getting Grops", this.api_endpoint)
 
 		const url = new URL(`${this.api_endpoint}/tables/groups`)
 

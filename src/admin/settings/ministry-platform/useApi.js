@@ -8,14 +8,14 @@ export default function useApi() {
 
 	const { authConfig } = useSelect((select) => {
 		return {
-			authConfig: select(optionsStore).getOptionGroup('connect')
+			authConfig: select(optionsStore).getOptionGroup('mp_connect')
 		}
 	}, [])
 
 	const initializeApi = (authConfig) => {
 		const apiInstance = new Api(authConfig)
 
-		apiInstance.authenticate().then(() => {
+		apiInstance.authenticate().finally(() => {
 			setApi(apiInstance)
 		})
 
