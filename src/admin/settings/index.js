@@ -13,6 +13,7 @@ import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
 import optionsStore from './store';
 import { chmsTab } from './chms-tab';
+import { licenseTab } from './license-tab';
 
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -198,8 +199,8 @@ function Settings() {
 								</TabPanel>
 							))
 						}
-						<TabPanel value={currentTab} index={chmsData.tabs.length + 2}>
-							<h2>License</h2>
+						<TabPanel value={currentTab} index={chmsData.tabs.length + 1}>
+							<DynamicTab tab={licenseTab} />
 						</TabPanel>
 					</Box>
 					</>
