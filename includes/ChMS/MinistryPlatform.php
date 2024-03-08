@@ -15,11 +15,73 @@ class MinistryPlatform extends ChMS {
 
 	public $settings_key = 'cpc_mp_options';
 
+	public $rest_namespace = '/ministry-platform';
+
 	public function integrations() {
 		$this->mpLoadConnectionParameters();
 		add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		add_action( 'cmb2_render_mp_fields', [ $this, 'render_field_select' ], 10, 5 );
+		add_action( 'admin_init', [ $this, 'maybe_update_options' ] );
+	}
+
+	/**
+	 * Update options to new version.
+	 *
+	 * @since 1.1.0
+	 */
+	public function maybe_update_options() {
+		// migrate legacy options
+
+		$mp_api_config = get_option( 'ministry_platform_api_config' );
+
+		// if ministry platform hasn't been configured or we've already migrated, exit.
+		if ( ! $mp_api_config ) {
+			return;
+		}
+
+		$custom_group_mapping = get_option( 'cp_group_custom_field_mapping' );
+		$group_mapping        = get_option( 'ministry_platform_group_mapping' );
+		$cpc_mp_options       = get_option( 'cpc_mp_options', array() );
+		
+		update_option( 'cpc_chms', array( 'platform' => 'mp' ) );
+		update_option( 'cpc_mp_connect', array(
+			'api_endpoint'             => $mp_api_config['MP_API_ENDPOINT'],
+			'oauth_discovery_endpoint' => $mp_api_config['MP_OAUTH_DISCOVERY_ENDPOINT'],
+			'client_id'                => $mp_api_config['MP_CLIENT_ID'],
+			'client_secret'            => $mp_api_config['MP_CLIENT_SECRET'],
+			'api_scope'                => $mp_api_config['MP_API_SCOPE'],
+		) );
+		
+		$mp_conf = array();
+
+		if ( $group_mapping ) {
+			$mp_conf['group_fields']        = array_merge( $this->get_default_fields( 'group' ), array_values( $group_mapping['fields'] ) );
+			$mp_conf['group_field_mapping'] = $group_mapping['mapping'];
+			$mp_conf['valid_fields']        = array_unique( array_values( $mp_conf['group_field_mapping'] ) );
+		}
+
+		if ( $custom_group_mapping ) {
+			$mapping = array();
+
+			foreach ( $custom_group_mapping as $field => $name ) {
+				$slug = preg_replace( '/[\-\s]+/', '_', strtolower( $name ) );
+				$slug = preg_replace( '/\W/', '', $slug );
+				
+				$mapping[$slug] = array(
+					'name'  => $name,
+					'value' => $field,
+				);
+			}
+
+			$mp_conf['custom_field_mapping'] = $mapping;
+		}
+		
+		update_option( 'cpc_mp_configuration', $mp_conf );
+
+		delete_option( 'ministry_platform_api_config' );
+		delete_option( 'ministry_platform_group_mapping' );
+		delete_option( 'cp_group_custom_field_mapping' );
 	}
 
 	/**
@@ -529,95 +591,17 @@ class MinistryPlatform extends ChMS {
 
 	}
 
-	/***** API Config Callbacks *****/
-
-	function mp_api_endpoint_callback( $args ) {
-		$options = get_option( 'ministry_platform_api_config' );
-
-
-		$opt = $this->get_option_value( 'MP_API_ENDPOINT', $options );
-
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="MP_API_ENDPOINT" name="ministry_platform_api_config[MP_API_ENDPOINT]" value="' . $opt . '" size="60"/>';
-
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="MP_API_ENDPOINT"> ' . $args[0] . '</label>';
-
-		echo $html;
-
-	} // end mp_api_endpoint_callback
-
-	function mp_oauth_discovery_callback( $args ) {
-		$options = get_option( 'ministry_platform_api_config' );
-
-		$opt = $this->get_option_value( 'MP_OAUTH_DISCOVERY_ENDPOINT', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="MP_OAUTH_DISCOVERY_ENDPOINT" name="ministry_platform_api_config[MP_OAUTH_DISCOVERY_ENDPOINT]" value="' . $opt . '" size="60"/>';
-
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="MP_OAUTH_DISCOVERY_ENDPOINT"> ' . $args[0] . '</label>';
-
-		echo $html;
-	} // end mp_oauth_discovery_callback
-
-	function mp_client_id_callback( $args ) {
-		$options = get_option( 'ministry_platform_api_config' );
-
-		$opt = $this->get_option_value( 'MP_CLIENT_ID', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="MP_CLIENT_ID" name="ministry_platform_api_config[MP_CLIENT_ID]" value="' . $opt . '" size="60"/>';
-
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="MP_CLIENT_ID"> ' . $args[0] . '</label>';
-
-		echo $html;
-	} // end mp_client_id_callback
-
-	function mp_client_secret_callback( $args ) {
-		$options = get_option( 'ministry_platform_api_config' );
-
-		$opt = $this->get_option_value( 'MP_CLIENT_SECRET', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="MP_CLIENT_SECRET" name="ministry_platform_api_config[MP_CLIENT_SECRET]" value="' . $opt . '" size="60"/>';
-
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="MP_CLIENT_SECRET"> ' . $args[0] . '</label>';
-
-		echo $html;
-	} // end mp_client_secret_callback
-
-	function mp_api_scope_callback( $args ) {
-		$options = get_option( 'ministry_platform_api_config' );
-
-		$opt = $this->get_option_value( 'MP_API_SCOPE', $options );
-
-		// Note the ID and the name attribute of the element match that of the ID in the call to add_settings_field
-		$html = '<input type="text" id="MP_API_SCOPE" name="ministry_platform_api_config[MP_API_SCOPE]" value="' . $opt . '" size="60"/>';
-
-		// Here, we will take the first argument of the array and add it to a label next to the checkbox
-		$html .= '<label for="MP_API_SCOPE"> ' . $args[0] . '</label>';
-
-		echo $html;
-	} // end mp_api_scope_callback
-
-	/***** End API Config Callbacks *****/
-
-
 	/**
 	 * Get oAuth and API connection parameters from the database
 	 *
 	 */
 	function mpLoadConnectionParameters() {
 		$options = array(
-			'MP_API_ENDPOINT'             => Settings::get( 'mp_api_endpoint' ),
-			'MP_OAUTH_DISCOVERY_ENDPOINT' => Settings::get( 'mp_oauth_discovery_endpoint' ),
-			'MP_CLIENT_ID'                => Settings::get( 'mp_client_id' ),
-			'MP_CLIENT_SECRET'            => Settings::get( 'mp_client_secret' ),
-			'MP_API_SCOPE'                => Settings::get( 'mp_api_scope' ),
+			'MP_API_ENDPOINT'             => Settings::get( 'api_endpoint', '', 'cpc_mp_connect' ),
+			'MP_OAUTH_DISCOVERY_ENDPOINT' => Settings::get( 'oauth_discovery_endpoint', '', 'cpc_mp_connect' ),
+			'MP_CLIENT_ID'                => Settings::get( 'client_id', '', 'cpc_mp_connect' ),
+			'MP_CLIENT_SECRET'            => Settings::get( 'client_secret', '', 'cpc_mp_connect' ),
+			'MP_API_SCOPE'                => Settings::get( 'api_scope', '', 'cpc_mp_connect' ),
 		);
 
 		// if there are unset options, exit
@@ -759,19 +743,26 @@ class MinistryPlatform extends ChMS {
 		$filter_query = 'Groups.End_Date >= getdate() OR Groups.End_Date IS NULL';
 		$filter       = apply_filters( 'cp_connect_chms_mp_groups_filter', $filter_query );
 
-		$fields = $this->get_all_fields( 'group' );
+		$fields = Settings::get( 'group_fields', array(), 'cpc_mp_configuration' );
+
 		$table  = $mp->table( 'Groups' );
 		$groups = $table
-								->select( implode( ',', $fields ) )
-								->filter( $filter )
-								->get();
+			->select( implode( ',', $fields ) )
+			->filter( $filter )
+			->get();
 
 		if( $table->errorMessage() ) {
 			return false;
 		}
 
-		$group_mapping       = $this->get_object_mapping( 'group' );
-		$custom_mappings     = $this->get_custom_object_mapping( 'group' );
+		// format the custom mapping data
+		$custom_mapping_option = Settings::get( 'custom_group_field_mapping', array(), 'cpc_mp_configuration' );
+		$custom_mapping       = array();
+		foreach ( $custom_mapping_option as $key => $data ) {
+			$custom_mapping[ $data['value'] ] = $data['name'];
+		}
+
+		$group_mapping       = Settings::get( 'group_field_mapping', array(), 'cpc_mp_configuration' );
 		$custom_mapping_data = array();
 
 		$formatted = [];
@@ -881,7 +872,7 @@ class MinistryPlatform extends ChMS {
 			 * Builds the custom data needed for getting available group options in metadata
 			 */
 			foreach ( array_keys( $group ) as $key ) {
-				if ( ! isset( $custom_mappings[ $key ] ) ) {
+				if ( ! isset( $custom_mapping[ $key ] ) ) {
 					continue;
 				}
 				if ( ! $group[ $key ] ) {
@@ -891,8 +882,8 @@ class MinistryPlatform extends ChMS {
 				if ( ! ( isset( $custom_mapping_data[ $key ] ) && $custom_mapping_data[ $key ] ) ) {
 					$custom_mapping_data[ $key ] = array(
 						'field_name'   => $key,
-						'display_name' => $custom_mappings[ $key ],
-						'slug'         => 'cp_connect_' . sanitize_title( $custom_mappings[ $key ] ),
+						'display_name' => $custom_mapping[ $key ],
+						'slug'         => 'cp_connect_' . sanitize_title( $custom_mapping[ $key ] ),
 						'options'      => array(),
 					);
 				}
@@ -904,7 +895,7 @@ class MinistryPlatform extends ChMS {
 				}
 			}
 
-			foreach ( $custom_mappings as $field => $display_name ) {
+			foreach ( $custom_mapping as $field => $display_name ) {
 				if ( ! isset( $group[ $field ] ) || ! $group[ $field ] ) {
 					continue;
 				}
