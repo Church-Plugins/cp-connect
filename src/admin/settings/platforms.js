@@ -1,7 +1,9 @@
 import ministryPlatform from "./ministry-platform";
+import pco from "./pco";
 
 const platforms = {
-	'ministry-platform': ministryPlatform
+	'mp': ministryPlatform,
+	'pco': pco,
 }
 
 export default platforms;

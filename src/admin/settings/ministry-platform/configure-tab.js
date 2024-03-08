@@ -14,6 +14,7 @@ import { useState, useEffect } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import optionsStore from '../store';
 import useApi from './useApi';
+import apiFetch from '@wordpress/api-fetch';
 
 const labels = {
 	'chms_id':             __( 'Group ID', 'cp-connect' ),
@@ -112,6 +113,9 @@ export default function ConfigureTab({ data, updateField }) {
 	const [newLabel, setNewLabel] = useState('')
 	const [newValue, setNewValue] = useState('')
 	const [addingCustomField, setAddingCustomField] = useState(false)
+	const [importStarted, setImportStarted] = useState(false)
+	const [importError, setImportError] = useState(null)
+	const [importPending, setImportPending] = useState(false)
 
 	const {
 		group_field_mapping,
@@ -142,8 +146,33 @@ export default function ConfigureTab({ data, updateField }) {
 		updateField('custom_field_mapping', newMapping)
 	}
 
+	const startImport = () => {
+		setImportPending(true)
+		apiFetch({
+			path: '/cp-connect/v1/ministry-platform/groups/pull',
+			method: 'POST',
+			data: {}
+		}).then((response) => {
+			setImportStarted(true)
+			console.log(response)
+		}).catch((e) => {
+			setImportError(e.message)
+		}).finally(() => {
+			setImportPending(false)
+		})
+	}
+
 	return (
 		<Box display="flex" flexDirection="column" gap={2}>
+			
+			{importStarted && <Alert severity="success">{__( 'Import started', 'cp-connect' )}</Alert>}
+
+			{importError && <Alert severity="error">{__( 'Error when starting import: ', 'cp-connect' )}{importError}</Alert>}
+
+			<Button disabled={importStarted || importPending} variant="contained" color="secondary" sx={{ alignSelf: 'start' }} onClick={startImport}>
+				{importPending ? __( 'Starting Import' ) : importStarted ? __( 'Import Started' ) : __( 'Start import', 'cp-connect' )}
+			</Button>
+
 			<MPFields data={data} updateField={updateField} />
 
 			<Typography variant="h5">{ __( 'Field mapping',	'cp-connect' ) }</Typography>
@@ -172,7 +201,7 @@ export default function ConfigureTab({ data, updateField }) {
 				<Box key={key} display="flex" gap={1} alignItems="center">
 					<TextField
 						label={__( 'Field Name', 'cp-connect' )}
-						value={value}
+						value={name}
 						onChange={(e) => updateCustomMappingField(key, { name: e.target.value, value: value })}
 						variant="outlined"
 						sx={{ width: '300px' }}

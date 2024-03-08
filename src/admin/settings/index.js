@@ -1,11 +1,7 @@
-import { createRoot, useRef, useState } from '@wordpress/element';
+import { createRoot, useState, useEffect } from '@wordpress/element';
 import './index.scss';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Typography from '@mui/material/Typography';
@@ -16,6 +12,7 @@ import platforms from './platforms';
 import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
 import optionsStore from './store';
+import { chmsTab } from './chms-tab';
 
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -28,30 +25,32 @@ const theme = createTheme({
 	},
 })
 
-function DynamicTab({ tab }) {
+function DynamicTab({ tab, prefix }) {
 	const { optionGroup, defaultData, component } = tab
+
+	const prefixedOptionGroup = prefix ? `${prefix}_${optionGroup}` : optionGroup
 
 	const { data, isSaving, error, isDirty, isHydrating } = useSelect((select) => {
 		return {
-			data: select(optionsStore).getOptionGroup(optionGroup),
+			data: select(optionsStore).getOptionGroup(prefixedOptionGroup),
 			isSaving: select(optionsStore).isSaving(),
 			error: select(optionsStore).getError(),
 			isDirty: select(optionsStore).isDirty(),
-			isHydrating: select(optionsStore).isResolving( 'getOptionGroup', [ optionGroup ] )
+			isHydrating: select(optionsStore).isResolving( 'getOptionGroup', [ prefixedOptionGroup ] )
 		}
-	}, [optionGroup])
+	}, [prefixedOptionGroup])
 
 	const { persistOptionGroup, setOptionGroup } = useDispatch(optionsStore)
 
 	const updateField = (field, value) => {
-		setOptionGroup(optionGroup, {
+		setOptionGroup(prefixedOptionGroup, {
 			...data,
 			[field]: value
 		})
 	}
 
 	const save = () => {
-		persistOptionGroup(optionGroup, data)
+		persistOptionGroup(prefixedOptionGroup, data)
 	}
 
 	return (
@@ -100,9 +99,10 @@ function TabPanel(props) {
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
       {...other}
+			style={{ height: '100%' }}
     >
       {value === index && (
-        <Card sx={{ p: 4 }} variant="outlined">
+        <Card sx={{ p: 4, overflowY: 'auto', maxHeight: '100%', boxSizing: 'border-box' }} variant="outlined">
           <Typography>{children}</Typography>
         </Card>
       )}
@@ -111,13 +111,19 @@ function TabPanel(props) {
 }
 
 function Settings() {
-	const [platform, setPlatform] = useState(Object.keys(platforms)[0])
-	const platformData = platforms[platform]
+	const { chms, isLoading } = useSelect((select) => {
+		return {
+			chms: select(optionsStore).getOptionGroup('main_options')?.chms,
+			isLoading: select(optionsStore).isResolving('getOptionGroup', ['main_options'])
+		}
+	})
+
+	const chmsData = platforms[chms] || { tabs: [] }
 
 	// creates a list of tabs based on the selected ChMS
 	const tabsNames = [
 		'select',
-		...platformData.tabs.map((tab) => tab.optionGroup),
+		...chmsData.tabs.map((tab) => tab.optionGroup),
 		'license'
 	]
 
@@ -128,55 +134,56 @@ function Settings() {
 		setCurrentTab(index)
 	}
 
-	const [currentTab, setCurrentTab] = useState(() => {
-		const url = new URL(window.location.href)
-		const tab = url.searchParams.get('tab')
+	const [currentTab, setCurrentTab] = useState(0)
 
-		if (tab) {
-			return tabsNames.indexOf(tab)
+	useEffect(() => {
+		if(chms) {
+			const url = new URL(window.location.href)
+			const tab = url.searchParams.get('tab')
+	
+			if (tab) {
+				const tabIndex = tabsNames.indexOf(tab)
+				if (tabIndex !== -1) {
+					setCurrentTab(tabIndex)
+				}
+			}
 		}
-
-		return 0
-	})
+	}, [chms])
 
 	return (
 		<ThemeProvider theme={theme}>
-			<Box sx={{ height: '100%', p: 2 }}>
+			<Box sx={{ height: '100%', p: 2, maxHeight: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
 				<h1>CP Connect</h1>
-				<Tabs value={currentTab} onChange={(_, value) => openTab(value)} sx={{ px: 2, mb: '-2px', mt: 4 }}>
-					<Tab label={__( 'Select a ChMS', 'cp-connect' )} />
-					{
-						platformData.tabs.map((tab) => (
-							<Tab key={tab.optionGroup} label={tab.name} />
-						))
-					}
-					<Tab label={__( 'License', 'cp-connect' )} />
-				</Tabs>
-				<TabPanel value={currentTab} index={0}>
-					<FormControl>
-						<InputLabel id="chms-select-label">ChMS</InputLabel>
-						<Select
-							labelId="chms-select-label"
-							label={__( 'ChMS', 'cp-connect' )}
-							value={platform}
-							onChange={(e) => setPlatform(e.target.value)}
-						>
-							{Object.keys(platforms).map((key) => (
-								<MenuItem key={key} value={key}>{platforms[key].name}</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-				</TabPanel>
 				{
-					platformData.tabs.map((tab, index) => (
-						<TabPanel key={tab.optionGroup} value={currentTab} index={index + 1}>
-							<DynamicTab tab={tab} />
+					isLoading ?
+					<p>{ __( 'Loading...', 'cp-connect' ) }</p> :
+					<>
+					<Tabs value={currentTab} onChange={(_, value) => openTab(value)} sx={{ px: 2, mb: '-2px', mt: 4 }}>
+						<Tab label={__( 'Select a ChMS', 'cp-connect' )} />
+						{
+							chmsData.tabs.map((tab) => (
+								<Tab key={tab.optionGroup} label={tab.name} />
+							))
+						}
+						<Tab label={__( 'License', 'cp-connect' )} />
+					</Tabs>
+					<Box sx={{ flexGrow: 1, minHeight: 0 }}>
+						<TabPanel value={currentTab} index={0}>
+							<DynamicTab tab={chmsTab} />
 						</TabPanel>
-					))
-				}
-				<TabPanel value={currentTab} index={platformData.tabs.length + 2}>
-					<h2>License</h2>
-				</TabPanel>
+						{
+							chmsData.tabs.map((tab, index) => (
+								<TabPanel key={tab.optionGroup} value={currentTab} index={index + 1}>
+									<DynamicTab tab={tab} prefix={chms} />
+								</TabPanel>
+							))
+						}
+						<TabPanel value={currentTab} index={chmsData.tabs.length + 2}>
+							<h2>License</h2>
+						</TabPanel>
+					</Box>
+					</>
+				}	
 			</Box>
 		</ThemeProvider>
 	)

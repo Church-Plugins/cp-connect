@@ -75,7 +75,7 @@ class _Init {
 	/**
 	 * Return integrations
 	 *
-	 * @return array
+	 * @return Integration[]
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
