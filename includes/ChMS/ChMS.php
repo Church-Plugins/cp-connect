@@ -25,6 +25,10 @@ abstract class ChMS {
 	 */
 	public $settings_key = '';
 
+	/**
+	 * @var string | REST namespace for this integration
+	 */
+	public $rest_namespace;
 
 	/**
 	 * Only make one instance of PostType
@@ -47,10 +51,43 @@ abstract class ChMS {
 		add_action( 'cpc_main_options_tabs', [ $this, 'api_settings_tab' ] );
 		add_action( 'cmb2_save_options-page_fields_cpc_main_options_page', [ $this, 'maybe_add_connection_message' ] );
 
+		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
+
 		if ( Settings::get( 'pull_now' ) ) {
 			add_action('admin_notices', [ $this, 'general_admin_notice' ] );
 		}
 	}
+
+	/**
+	 * Register rest routes
+	 *
+	 * @since  1.1.0
+	 *
+	 * @return void
+	 */
+	public function register_rest_routes() {
+		$integrations = \CP_Connect\Integrations\_Init::get_instance()->get_integrations();
+
+		foreach( $integrations as $integration ) {
+			register_rest_route(
+				'cp-connect/v1',
+				"$this->rest_namespace/$integration->type/pull",
+				[
+					'methods'  => 'POST',
+					'callback' => function() use ( $integration ) {
+						do_action( "cp_connect_pull_$integration->type", $integration );
+	
+						return rest_ensure_response( [ 'status' => 'success' ] );
+					},
+					'permission_callback' => function() {
+						return current_user_can( 'manage_options' );
+					}
+				]
+			);
+
+		}
+	}
+
 
 	public function general_admin_notice() {
 		echo '<div class="notice notice-success is-dismissible">
