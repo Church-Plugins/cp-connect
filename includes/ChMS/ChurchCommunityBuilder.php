@@ -9,12 +9,12 @@ class ChurchCommunityBuilder extends ChMS {
 
 	public $api = null;
 
-	public function integrations() {
+	public $rest_namespace = '/ccb';
 
+	public function integrations() {
 		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		add_action( 'cp_update_item_after', [ $this, 'load_group_image' ], 10, 3 );
 		add_filter( 'cp_group_get_thumbnail', [ $this, 'get_group_image' ], 10, 2 );
-
 	}
 
 
@@ -31,7 +31,7 @@ class ChurchCommunityBuilder extends ChMS {
 
 		// make sure we have all required parameters
 		foreach( [ 'api_prefix', 'api_user', 'api_pass' ] as $option ) {
-			if ( ! Settings::get( $option ) ) {
+			if ( ! Settings::get( $option, false, 'cpc_ccb_connect' ) ) {
 				return false;
 			}
 		}
@@ -58,6 +58,21 @@ class ChurchCommunityBuilder extends ChMS {
 		}
 	}
 
+	public function pull_groups_2() {
+		$args = [
+			'query_string' => [
+				'srv'                  => 'group_profiles',
+				'include_participants' => 'false',
+				'include_image_link'   => 'true',
+				// 'per_page' => 25,
+			],
+			'refresh_cache' => 1,
+		];
+
+		$groups = $this->api()->get( $args ); //todo test this and return early if not what we want
+
+		$groups = json_decode( json_encode( $groups->response->groups ), false );
+	}
 
 	public function pull_groups( $integration ) {
 
@@ -200,7 +215,7 @@ class ChurchCommunityBuilder extends ChMS {
 		if ( $existing_options = get_option( 'ccb_plugin_options' ) ) {
 			foreach( [ 'api_prefix', 'api_user', 'api_pass' ] as $option ) {
 				if ( ! empty( $existing_options[ $option ] ) ) {
-					Settings::set( $option, $existing_options[ $option ] );
+					Settings::set( $option, $existing_options[ $option ], 'cpc_ccb_connect' );
 				}
 			}
 

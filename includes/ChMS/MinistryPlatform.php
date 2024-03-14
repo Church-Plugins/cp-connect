@@ -44,7 +44,7 @@ class MinistryPlatform extends ChMS {
 		$group_mapping        = get_option( 'ministry_platform_group_mapping' );
 		$cpc_mp_options       = get_option( 'cpc_mp_options', array() );
 		
-		update_option( 'cpc_chms', array( 'platform' => 'mp' ) );
+		update_option( 'cpc_main_options', array( 'chms' => 'mp' ) );
 		update_option( 'cpc_mp_connect', array(
 			'api_endpoint'             => $mp_api_config['MP_API_ENDPOINT'],
 			'oauth_discovery_endpoint' => $mp_api_config['MP_OAUTH_DISCOVERY_ENDPOINT'],

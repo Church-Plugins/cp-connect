@@ -85,8 +85,6 @@ class Api {
 	async getGroups(config) {
 		await this.authenticate()
 
-		console.log("Getting Grops", this.api_endpoint)
-
 		const url = new URL(`${this.api_endpoint}/tables/groups`)
 
 		if(config) {

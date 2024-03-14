@@ -131,11 +131,10 @@ function TabPanel(props) {
   );
 }
 
-function Settings() {
-	const { chms, isLoading } = useSelect((select) => {
+function Settings({ initialData }) {
+	const { chms = initialData.chms } = useSelect((select) => {
 		return {
 			chms: select(optionsStore).getOptionGroup('main_options')?.chms,
-			isLoading: select(optionsStore).isResolving('getOptionGroup', ['main_options'])
 		}
 	})
 
@@ -155,56 +154,48 @@ function Settings() {
 		setCurrentTab(index)
 	}
 
-	const [currentTab, setCurrentTab] = useState(0)
+	const [currentTab, setCurrentTab] = useState(() => {
+		const url = new URL(window.location.href)
+		const tab = url.searchParams.get('tab')
 
-	useEffect(() => {
-		if(chms) {
-			const url = new URL(window.location.href)
-			const tab = url.searchParams.get('tab')
-	
-			if (tab) {
-				const tabIndex = tabsNames.indexOf(tab)
-				if (tabIndex !== -1) {
-					setCurrentTab(tabIndex)
-				}
+		if (tab) {
+			const tabIndex = tabsNames.indexOf(tab)
+			if (tabIndex !== -1) {
+				return tabIndex
 			}
 		}
-	}, [chms])
+
+		return 0
+	})
 
 	return (
 		<ThemeProvider theme={theme}>
 			<Box sx={{ height: '100%', p: 2, maxHeight: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
 				<h1>CP Connect</h1>
-				{
-					isLoading ?
-					<p>{ __( 'Loading...', 'cp-connect' ) }</p> :
-					<>
-					<Tabs value={currentTab} onChange={(_, value) => openTab(value)} sx={{ px: 2, mb: '-2px', mt: 4 }}>
-						<Tab label={__( 'Select a ChMS', 'cp-connect' )} />
-						{
-							chmsData.tabs.map((tab) => (
-								<Tab key={tab.optionGroup} label={tab.name} />
-							))
-						}
-						<Tab label={__( 'License', 'cp-connect' )} />
-					</Tabs>
-					<Box sx={{ flexGrow: 1, minHeight: 0 }}>
-						<TabPanel value={currentTab} index={0}>
-							<DynamicTab tab={chmsTab} />
-						</TabPanel>
-						{
-							chmsData.tabs.map((tab, index) => (
-								<TabPanel key={tab.optionGroup} value={currentTab} index={index + 1}>
-									<DynamicTab tab={tab} prefix={chms} />
-								</TabPanel>
-							))
-						}
-						<TabPanel value={currentTab} index={chmsData.tabs.length + 1}>
-							<DynamicTab tab={licenseTab} />
-						</TabPanel>
-					</Box>
-					</>
-				}	
+				<Tabs value={currentTab} onChange={(_, value) => openTab(value)} sx={{ px: 2, mb: '-2px', mt: 4 }}>
+					<Tab label={__( 'Select a ChMS', 'cp-connect' )} />
+					{
+						chmsData.tabs.map((tab) => (
+							<Tab key={tab.optionGroup} label={tab.name} />
+						))
+					}
+					<Tab label={__( 'License', 'cp-connect' )} />
+				</Tabs>
+				<Box sx={{ flexGrow: 1, minHeight: 0 }}>
+					<TabPanel value={currentTab} index={0}>
+						<DynamicTab tab={chmsTab} />
+					</TabPanel>
+					{
+						chmsData.tabs.map((tab, index) => (
+							<TabPanel key={tab.optionGroup} value={currentTab} index={index + 1}>
+								<DynamicTab tab={tab} prefix={chms} />
+							</TabPanel>
+						))
+					}
+					<TabPanel value={currentTab} index={chmsData.tabs.length + 1}>
+						<DynamicTab tab={licenseTab} />
+					</TabPanel>
+				</Box>
 			</Box>
 		</ThemeProvider>
 	)
@@ -213,9 +204,11 @@ function Settings() {
 document.addEventListener('DOMContentLoaded', function () {
 	const root = document.querySelector('.cp_settings_root.cp-connect')
 
+	const initialData = JSON.parse(root.dataset.initial)
+
 	if (root) {
 		createRoot(root).render(
-			<Settings />
+			<Settings initialData={initialData} />
 		)
 	}
 })

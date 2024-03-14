@@ -22,6 +22,8 @@ class PCO extends ChMS {
 	 */
 	public $api = null;
 
+	public $rest_namespace = '/pco';
+
 	protected $events = [];
 
 	protected $campuses = [];
@@ -38,14 +40,14 @@ class PCO extends ChMS {
 		if( true === $this->load_connection_parameters() ) {
 			$this->maybe_setup_taxonomies();
 
-			$events_enabled = $this->get_option( 'events_enabled', 1 );
+			$events_enabled = $this->get_option( 'events_enabled', 1, 'cpc_pco_connect' );
 			if ( 1 == $events_enabled ) {
 				add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );
 			} elseif ( 2 == $events_enabled ) {
 				add_action( 'cp_connect_pull_events', [ $this, 'pull_registrations' ] );
 			}
 
-			if ( $this->get_option( 'groups_enabled', 1 ) ) {
+			if ( $this->get_option( 'groups_enabled', 1, 'cpc_pco_connect' ) ) {
 				add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 			}
 		}
@@ -59,8 +61,8 @@ class PCO extends ChMS {
 	public function check_connection() {
 
 		// make sure we have all required parameters
-		foreach( [ 'pco_app_id', 'pco_secret' ] as $option ) {
-			if ( ! Settings::get( $option ) ) {
+		foreach( [ 'app_id', 'secret' ] as $option ) {
+			if ( ! Settings::get( $option, '', 'cpc_pco_connect' ) ) {
 				return false;
 			}
 		}
@@ -161,8 +163,13 @@ class PCO extends ChMS {
 					->module('calendar')
 					->table('tag_groups')
 					->get();
+
 			if( !empty( $this->api()->errorMessage() ) ) {
 				error_log( var_export( $this->api()->errorMessage(), true ) );
+				return [];
+			}
+
+			if ( empty( $raw_groups['data'] ) ) {
 				return [];
 			}
 
@@ -176,7 +183,6 @@ class PCO extends ChMS {
 
 		$output = [];
 
-		// foreach( $raw_groups['data'] as $group ) {
 		foreach( $taxonomies as $group_name => $group_id ) {
 
 			if( !array_key_exists( $group_name, $output ) ) {
@@ -1056,6 +1062,16 @@ class PCO extends ChMS {
 			delete_option( 'pco_plugin_options' );
 		}
 
+		if ( $existing_options = get_option( 'pco_main_options' ) ) {
+			foreach( [ 'pco_app_id' => 'app_id', 'pco_secret' => 'secret' ] as $old_option => $new_option ) {
+				if ( ! empty( $existing_options[ $old_option ] ) ) {
+					Settings::set( $new_option, $existing_options[ $old_option ], 'cpc_pco_connect' );
+				}
+			}
+
+			delete_option( 'pco_main_options' );
+		}
+
 		$cmb2->add_field( [
 			'name' => 'PCO API Configuration',
 			'id'   => 'pco_api_title',
@@ -1178,8 +1194,8 @@ class PCO extends ChMS {
 	 * @return bool
 	 */
 	function load_connection_parameters() {
-		$app_id = Settings::get( 'pco_app_id' );
-		$secret = Settings::get( 'pco_secret' );
+		$app_id = Settings::get( 'app_id', '', 'cpc_pco_connect' );
+		$secret = Settings::get( 'secret', '', 'cpc_pco_connect' );
 
 		if( empty( $app_id ) || empty( $secret ) ) {
 			return false;

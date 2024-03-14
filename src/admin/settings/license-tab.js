@@ -1,6 +1,8 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import { __ } from '@wordpress/i18n'
 import apiFetch from '@wordpress/api-fetch'
@@ -84,6 +86,11 @@ function LicenseTab({ data, updateField, save }) {
 				</Button>
 			</Box>
 			
+			<FormControlLabel
+				control={<Switch checked={data.beta} onChange={(e) => updateField('beta', e.target.checked)} />}
+				label={__( 'Enable beta updates', 'cp-connect' )}
+				sx={{ maxWidth: 'fit-content' }}
+			/>
 		</Box>		
 	)
 }

@@ -121,7 +121,7 @@ class API {
 		$cpc_ccb = get_option( 'ccb_plugin_options', [] );
 
 		if ( empty( $cpc_ccb ) ) {
-			$cpc_ccb = get_option( 'cpc_main_options', [] );
+			$cpc_ccb = get_option( 'cpc_ccb_connect', [] );
 		}
 
 		return $cpc_ccb;

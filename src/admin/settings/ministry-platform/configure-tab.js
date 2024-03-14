@@ -144,8 +144,6 @@ export default function ConfigureTab({ data, updateField }) {
 		const newMapping = { ...group_field_mapping }
 		newMapping[key] = value
 
-		console.log('updating mapping', newMapping, key, value)
-
 		updateField('group_field_mapping', newMapping)
 	}
 
@@ -159,7 +157,6 @@ export default function ConfigureTab({ data, updateField }) {
 	const updateCustomMappingField = (key, { name, value }) => {
 		const newMapping = { ...custom_group_field_mapping }
 		newMapping[key] = { name, value }
-		console.log('updating custom mapping', newMapping, key, name, value)
 		updateField('custom_group_field_mapping', newMapping)
 	}
 

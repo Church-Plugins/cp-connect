@@ -122,8 +122,15 @@ class Settings {
 	 * Outputs the settings react entrypoint.
 	 */
 	public function settings_page_content() {
+		$initial_chms = Settings::get( 'chms', 'mp' )
+
 		?>
-		<div class="cp_settings_root cp-connect"></div>
+		<div
+			class="cp_settings_root cp-connect"
+			data-initial='<?php echo wp_json_encode( [
+				'chms' => $initial_chms,
+			] ); ?>'
+		></div>
 		<?php
 	}
 
