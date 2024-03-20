@@ -87,6 +87,36 @@ class PCO extends ChMS {
 
 	}
 
+	public function check_auth( $data ) {
+		putenv( 'PCO_APP_ID=' . $data->app_id );
+		putenv( 'PCO_SECRET=' . $data->secret );
+
+		$api = new PlanningCenterAPI();
+
+		$data = $api->module( 'people' )->table( 'me' )->get();
+
+		if( !empty( $this->api()->errorMessage() ) ) {
+			throw new \Exception( $this->api()->errorMessage()['errors'][0]['detail'] );
+		}
+
+		return true;
+	}
+
+	public function get_auth_api_args() {
+		return [
+			'app_id' => [
+				'type'        => 'string',
+				'description' => 'The App ID for the Planning Center Online API',
+				'required'    => true
+			],
+			'secret' => [
+				'type'        => 'string',
+				'description' => 'The Secret for the Planning Center Online API',
+				'required'    => true
+			]
+		];
+	}
+
 	public function event_taxonomies( $item, $id ) {
 		$taxonomies = [ 'Ministry Group', 'Ministry Leader', 'Frequency', 'cp_ministry' ];
 		foreach( $taxonomies as $tax ) {

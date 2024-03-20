@@ -14,6 +14,8 @@ export default {
 			defaultData: {
 				app_id: '',
 				secret: '',
+				step: 0,
+				authorized: false,
 			}
 		},
 		{

@@ -144,6 +144,22 @@ abstract class ChMS {
 	abstract function api_settings( $cmb2 );
 
 	/**
+	 * Auth schema properties
+	 *
+	 * @return array
+	 */
+	abstract function get_auth_api_args();
+
+	/**
+	 * Check authentication
+	 *
+	 * @param \stdClass $data The data to check.
+	 * @return true
+	 * @throws \Exception If the authentication fails.
+	 */
+	abstract function check_auth( $data );
+
+	/**
 	 * Register the settings tab
 	 *
 	 * @since  1.1.0

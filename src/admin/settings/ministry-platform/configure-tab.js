@@ -3,18 +3,20 @@ import Autocomplete from '@mui/material/Autocomplete';
 import Chip from '@mui/material/Chip';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import { __ } from '@wordpress/i18n';
-import { useState, useEffect } from '@wordpress/element';
-import { useSelect } from '@wordpress/data';
-import optionsStore from '../store';
+import { __, sprintf } from '@wordpress/i18n';
+import { useState, useMemo, useEffect } from '@wordpress/element';
 import useApi from './useApi';
 import apiFetch from '@wordpress/api-fetch';
+import { debounce, useDebounce } from '@wordpress/compose';
+import Check from '@mui/icons-material/Check';
+import Error from '@mui/icons-material/Error';
+import CircularProgress from '@mui/material/CircularProgress';
+import { lighten } from '@mui/system/colorManipulator';
+import { styled } from '@mui/system';
+import { useTheme } from '@mui/material/styles';
 
 const labels = {
 	'chms_id':             __( 'Group ID', 'cp-connect' ),
@@ -39,12 +41,33 @@ const labels = {
 	'virtual':             __( 'Virtual', 'cp-connect' ),
 }
 
-function MPFields({ data, updateField }) {
+function MPFields({ data, updateField, usedFields }) {
+	const theme = useTheme()
 	const [fieldError, setFieldError] = useState(null)
 	const [inputValue, setInputValue] = useState('')
+	const [validCustomField, setValidCustomField] = useState(null)
 	const api = useApi()
 
 	const { group_fields } = data
+
+	const validateField = useMemo(() => {
+		return debounce((value) => {
+			if(!api) return
+			setValidCustomField('loading')
+			api.getGroups({
+				top: 1,
+				select: value
+			}).then(() => {
+				setValidCustomField('valid')
+			}).catch(() => {
+				setValidCustomField('invalid')
+			})
+		}, 500)
+	}, [api])
+
+	useEffect(() => {
+		return () => validateField.cancel()
+	}, [validateField])
 
 	const testCurrentFields = () => {
 		if(!api) return
@@ -71,15 +94,19 @@ function MPFields({ data, updateField }) {
 					updateField('group_fields', value.map(v => typeof v === 'string' ? v : v.value))
 				}}
 				inputValue={inputValue}
+				getOptionDisabled={(option) => validCustomField !== 'valid'}
 				onInputChange={(e, value) => {
-					const options = value.split(',').map(v => v.trim()).filter(v => v.length)
+					// const options = value.split(',').map(v => v.trim()).filter(v => v.length)
+					
+					setInputValue(value)
+					validateField(value)
 
-					if(options.length > 1 || value.endsWith(',')) {
-						updateField('group_fields', group_fields.concat(options))
-						setInputValue('')
-					} else {
-						setInputValue(value)
-					}
+					// if(options.length > 1 || value.endsWith(',')) {
+					// 	updateField('group_fields', group_fields.concat(options))
+					// 	setInputValue('')
+					// } else {
+					// 	setInputValue(value)
+					// }
 				}}
 				options={[]}
 				freeSolo
@@ -90,23 +117,50 @@ function MPFields({ data, updateField }) {
 					value.map((option, index) => (
 						<Chip
 							label={typeof option === 'string' ? option : option.value}
+							color={usedFields.includes(option) ? 'success' : 'default'}
 							{...getTagProps({ index })}
 						/>
 					))
 				)}
+				renderOption={(props, option) => (
+					<Box component="li" {...props} flex alignItems="center" gap={2}>
+						{
+							validCustomField === 'invalid' ?
+							<Error color="error" /> :
+							validCustomField === 'valid' ?
+							<Check color="success" /> :
+							validCustomField === 'loading' || !validCustomField ?
+							<CircularProgress size={20} /> :
+							null
+						}
+
+						{
+							validCustomField === 'loading' || !validCustomField ?
+							__( 'Checking field validity', 'cp-connect' ):
+							validCustomField === 'invalid' ?
+							/* translators: %s: field name */
+							sprintf( __( 'Invalid field: "%s"', 'cp-connect' ), option.label ) :
+							/* translators: %s: field name */
+							sprintf( __( 'Add "%s" field', 'cp-connect' ), option.label )
+						}
+					</Box>
+				)}
 				getOptionLabel={(option) => (
 					typeof option === 'string' ? option : option.label
 				)}
-				filterOptions={(options, params) => (params.inputValue.length ? [
+				filterOptions={(_options, params) => (params.inputValue.length ? [
 					{
 						value: params.inputValue,
-						label: `Add "${params.inputValue}"`
+						label: params.inputValue
 					}
 				] : [])}
 				renderInput={(params) => (
 					<TextField {...params} label={__( 'Group Fields', 'cp-connect' )} />
 				)}
-				sx={{ maxWidth: '1200px' }}
+				sx={{
+					maxWidth: '1200px'
+					
+				}}
 			/>
 			{
 				fieldError && <Alert severity="error">
@@ -116,7 +170,6 @@ function MPFields({ data, updateField }) {
 					<pre><code>{fieldError}</code></pre>
 				</Alert>
 			}
-			<Button onClick={testCurrentFields} sx={{ alignSelf: 'start' }} variant="outlined">{ __( 'Update', 'cp-connect' ) }</Button>
 		</>
 	)
 }
@@ -202,9 +255,14 @@ export default function ConfigureTab({ data, updateField }) {
 				{importPending ? __( 'Starting Import' ) : importStarted ? __( 'Import Started' ) : __( 'Start import', 'cp-connect' )}
 			</Button>
 
-			<MPFields data={data} updateField={updateField} />
+			<MPFields data={data} updateField={updateField} usedFields={Object.values(data.group_field_mapping)} />
 
 			<Typography variant="h5">{ __( 'Field mapping',	'cp-connect' ) }</Typography>
+
+			<Alert severity='warning'>
+				WARGNING
+			</Alert>
+
 			{Object.entries(labels).map(([key, label]) => (
 				<FormControl key={key}>
 					<Autocomplete
@@ -212,12 +270,13 @@ export default function ConfigureTab({ data, updateField }) {
 						onChange={(e, option) => {
 							updateMappingField(key, option?.value || '')
 						}}
-						sx={{ width: '300px' }}
+						color="warning"
+						sx={{ width: '300px', borderColor: "" }}
 						options={[
 							{ label: '--Ignore--', value: '' },
 							...valid_fields.map((field) => ({ label: field, value: field }))
 						]}
-						renderInput={(params) => <TextField {...params} label={label} variant="outlined" />}
+						renderInput={(params) => <TextField {...params} label={label} variant="outlined" color="warning" />}
 						isOptionEqualToValue={(option, value) => option.value === value}
 					/>
 				</FormControl>

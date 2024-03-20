@@ -17,6 +17,47 @@ class MinistryPlatform extends ChMS {
 
 	public $rest_namespace = '/ministry-platform';
 
+	public function check_auth( $data ) {
+		// load connection parameters if they aren't already loaded
+		if ( ! getenv( 'MP_API_ENDPOINT' ) ) {
+			$this->mpLoadConnectionParameters();
+		}
+
+		$mp = new MP();
+
+		// Authenticate to get access token required for API calls
+		if ( ! $mp->authenticate() ) {
+			throw new \Exception( 'Failed to authenticate with Ministry Platform' );
+		}
+
+		return true;
+	}
+
+	public function get_auth_api_args() {
+		return [
+			'api_endpoint'             => [
+				'type'     => 'string',
+				'required' => true,
+			],
+			'oauth_discovery_endpoint' => [
+				'type'     => 'string',
+				'required' => true,
+			],
+			'client_id'                => [
+				'type'     => 'string',
+				'required' => true,
+			],
+			'client_secret'            => [
+				'type'     => 'string',
+				'required' => true,
+			],
+			'api_scope'                => [
+				'type'     => 'string',
+				'required' => true,
+			],
+		];
+	}
+
 	public function integrations() {
 		$this->mpLoadConnectionParameters();
 		add_action( 'cp_connect_pull_events', [ $this, 'pull_events' ] );

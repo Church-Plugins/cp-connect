@@ -11,6 +11,24 @@ class ChurchCommunityBuilder extends ChMS {
 
 	public $rest_namespace = '/ccb';
 
+	public function check_auth( $data ) {
+		return true;
+	}
+
+	public function get_auth_api_args() {
+		return [
+			'api_prefix' => [
+				'type' => 'string',
+			],
+			'api_user' => [
+				'type' => 'string',
+			],
+			'api_pass' => [
+				'type' => 'string',
+			],
+		];
+	}
+
 	public function integrations() {
 		add_action( 'cp_connect_pull_groups', [ $this, 'pull_groups' ] );
 		add_action( 'cp_update_item_after', [ $this, 'load_group_image' ], 10, 3 );

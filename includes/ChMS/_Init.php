@@ -3,6 +3,7 @@
 namespace CP_Connect\ChMS;
 
 use CP_Connect\Admin\Settings;
+use WP_Error;
 
 require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/cli/PCO.php" );
 require_once( CP_CONNECT_PLUGIN_DIR . "/includes/ChMS/ccb-api/ccb-api.php" );
@@ -119,6 +120,26 @@ class _Init {
 				]
 			);
 		}
+
+		register_rest_route(
+			'cp-connect/v1',
+			"$chms->rest_namespace/authenticate",
+			[
+				'methods'  => 'POST',
+				'callback' => function( $request ) use ( $chms ) {
+					try {
+						$authorized = $chms->check_auth( $request->get_param( 'data' ) );
+						return rest_ensure_response( [ 'authorized' => $authorized ] );
+					} catch ( \Exception $e ) {
+						return new \WP_Error( 'authentication_failed', $e->getMessage(), [ 'status' => 401 ] );
+					}
+				},
+				'permission_callback' => function() {
+					return current_user_can( 'manage_options' );
+				},
+				'args' => $chms->get_auth_api_args()
+			]
+		);
 	}
 
 	/**
