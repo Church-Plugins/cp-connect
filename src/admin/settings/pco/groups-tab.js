@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
@@ -30,6 +31,9 @@ const ENROLLMENT_STRATEGY_OPTIONS = {
 }
 
 export default function GroupsTab({ data, updateField, globalData }) {
+	const [pulling, setPulling] = useState(false)
+	const [pullSuccess, setPullSuccess] = useState(false)
+	const [error, setError] = useState(null)
 
 	const updateFilters = (newData) => {
 		updateField('filter', {
@@ -39,11 +43,20 @@ export default function GroupsTab({ data, updateField, globalData }) {
 	}
 
 	const handlePull = () => {
+		setPulling(true)
 		apiFetch({
 			path: '/cp-connect/v1/pull/cp_groups',
 			method: 'POST',
 		}).then(response => {
-			console.log(response)
+			if(response.success) {
+				setPullSuccess(true)
+			} else {
+				setError(response.message)
+			}
+		}).catch(err => {
+			setError(err.message)
+		}).finally(() => {
+			setPulling(false)
 		})
 	}
 
@@ -55,8 +68,6 @@ export default function GroupsTab({ data, updateField, globalData }) {
 			updateField('facets', data.facets.filter(facet => data.tag_groups.find(tag => tag.id === facet.id)))
 		}
 	}, [data.tag_groups])
-
-	console.log(globalData)
 
 	const filterConfig = {
 		label: __( 'Groups', 'cp-connect' ),
@@ -152,7 +163,26 @@ export default function GroupsTab({ data, updateField, globalData }) {
 				</RadioGroup>
 			</FormControl>
 			<Filters filterConfig={filterConfig} filter={data.filter} compareOptions={globalData.pco.compare_options} onChange={updateFilters} />
-			<Button variant="contained" sx={{ mt: 2 }} onClick={handlePull}>{ __( 'Pull Now', 'cp-connect' ) }</Button>
+			<Button
+				variant="contained"
+				sx={{ mt: 2 }}
+				onClick={handlePull}
+				disabled={pulling}
+			>
+				{ pulling ? __( 'Starting import', 'cp-connect' ) : __( 'Pull Now', 'cp-connect' ) }
+			</Button>
+			{
+				pullSuccess &&
+				<Alert severity='success' sx={{ mt: 2 }}>
+					{ __( 'Import started', 'cp-connect' ) }
+				</Alert>
+			}
+			{
+				error &&
+				<Alert severity='error' sx={{ mt: 2 }}>
+					<div dangerouslySetInnerHTML={{ __html: error }} />
+				</Alert>
+			}
 		</div>
 	)
 }

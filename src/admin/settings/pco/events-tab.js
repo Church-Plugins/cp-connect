@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
@@ -12,6 +13,7 @@ import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined';
 import FormHelperText from '@mui/material/FormHelperText';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
+import { useState } from '@wordpress/element';
 
 import Filters from './filters';
 import AsyncSelect from './async-select';
@@ -24,6 +26,9 @@ const EVENT_RECURRENCE_OPTIONS = [
 ]
 
 export default function EventsTab({ data, updateField, globalData }) {
+	const [pulling, setPulling] = useState(false)
+	const [pullSuccess, setPullSuccess] = useState(false)
+	const [error, setError] = useState(null)
 
 	const updateFilters = (newData) => {
 		updateField('filter', {
@@ -33,15 +38,20 @@ export default function EventsTab({ data, updateField, globalData }) {
 	}
 
 	const handlePull = () => {
+		setPulling(true)
 		apiFetch({
 			path: '/cp-connect/v1/pull/tec',
 			method: 'POST',
 		}).then(response => {
-			console.log(response)
+			if(response.success) {
+				setPullSuccess(true)
+			} else {
+				setError(response.message)
+			}
+		}).finally(() => {
+			setPulling(false)
 		})
 	}
-
-	console.log("global data", globalData)
 
 	const filterConfig = {
 		label: __( 'Events', 'cp-connect' ),
@@ -94,7 +104,25 @@ export default function EventsTab({ data, updateField, globalData }) {
 				</RadioGroup>
 			</FormControl>
 			<Filters filterConfig={filterConfig} filter={data.filter} compareOptions={globalData.pco.compare_options} onChange={updateFilters} />
-			<Button variant="contained" sx={{ mt: 2 }} onClick={handlePull}>{ __( 'Pull Now', 'cp-connect' ) }</Button>
+
+			<Button
+				variant="contained"
+				sx={{ mt: 2 }}
+				disabled={pulling}
+				onClick={handlePull}
+			>
+				{ pulling ? __( 'Starting import', 'cp-connect' ) : __( 'Pull Now', 'cp-connect' ) }
+			</Button>
+			{
+				pullSuccess &&
+				<Alert severity="success" sx={{ mt: 2 }}>{ __( 'Import started', 'cp-connect' ) }</Alert>
+			}
+			{
+				error &&
+				<Alert severity="error" sx={{ mt: 2 }}>{
+					<div dangerouslySetInnerHTML={{ __html: error }} />
+				}</Alert>
+			}
 		</div>
 	)
 }

@@ -148,8 +148,6 @@ function Condition({
 		valueType
 	)
 
-	console.log(fieldType, valueType, filterType)
-
 	return (
 		<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
 			<FormControl>
@@ -288,8 +286,6 @@ function Filters({ filterConfig, filter, compareOptions, onChange = () => {} }) 
 			...newData
 		})
 	}
-
-	console.log(filter)
 
 	const handleConditionChange = (id, condition) => {
 		handleChange({ conditions: conditions.map((c) => c.id === id ? condition : c) })
