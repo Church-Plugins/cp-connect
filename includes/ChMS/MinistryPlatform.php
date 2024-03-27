@@ -658,13 +658,10 @@ class MinistryPlatform extends ChMS {
 	/**
 	 * Handles pulling events from Ministry Platform
 	 *
-	 * @param \CP_Connect\Integrations\TEC $integration
+	 * @param \CP_Connect\Integrations\TEC $integration The integration to pull events for.
 	 */
 	public function pull_events( $integration ) {
-
-		// TODO: Update data
-
-		$mp      = new MP();
+		$mp = new MP();
 
 		// Authenticate to get access token required for API calls
 		if ( ! $mp->authenticate() ) {

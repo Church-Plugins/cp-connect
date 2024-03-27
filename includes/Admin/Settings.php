@@ -122,14 +122,23 @@ class Settings {
 	 * Outputs the settings react entrypoint.
 	 */
 	public function settings_page_content() {
-		$initial_chms = Settings::get( 'chms', 'mp' )
+		$entrypoint_data = [
+			'chms' => Settings::get( 'chms', 'mp' ),
+		];
+
+		/**
+		 * Filters the entrypoint data for the settings page.
+		 *
+		 * @param array $entrypoint_data The entrypoint data.
+		 * @return array
+		 * @since 1.1.0
+		 */
+		$entrypoint_data = apply_filters( 'cp_connect_settings_entrypoint_data', $entrypoint_data );
 
 		?>
 		<div
 			class="cp_settings_root cp-connect"
-			data-initial='<?php echo wp_json_encode( [
-				'chms' => $initial_chms,
-			] ); ?>'
+			data-initial='<?php echo wp_json_encode( $entrypoint_data ); ?>'
 		></div>
 		<?php
 	}

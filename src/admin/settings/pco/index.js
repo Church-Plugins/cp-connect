@@ -2,6 +2,8 @@
 import { __ } from '@wordpress/i18n';
 import SettingsTab from './settings-tab';
 import ConnectTab from './connect-tab';
+import GroupsTab from './groups-tab';
+import EventsTab from './events-tab';
 
 // Ministry platform data
 export default {
@@ -26,6 +28,36 @@ export default {
 				events_enabled: 0,
 				events_register_button_enabled: 0,
 				groups_enabled: 1
+			}
+		},
+		{
+			name: __( 'Groups', 'cp-connect' ),
+			component: (props) => <GroupsTab {...props} />,
+			optionGroup: 'groups',
+			defaultData: {
+				types: [],
+				tag_groups: [],
+				visibility: 'public',
+				enrollment_status: [],
+				enrollment_strategies: [],
+				facets: [],
+				filter: {
+					type: 'all',
+					conditions: [],
+				}
+			}
+		},
+		{
+			name: __( 'Events', 'cp-connect' ),
+			component: (props) => <EventsTab {...props} />,
+			optionGroup: 'events',
+			defaultData: {
+				visibility: 'public',
+				tag_groups: [],
+				filter: {
+					type: 'all',
+					conditions: [],
+				}
 			}
 		}
 	]

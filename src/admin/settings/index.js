@@ -26,7 +26,7 @@ const theme = createTheme({
 	},
 })
 
-function DynamicTab({ tab, prefix }) {
+function DynamicTab({ tab, prefix, globalData }) {
 	const { optionGroup, defaultData, component } = tab
 	const isDirtyRef = useRef(false)
 
@@ -97,6 +97,7 @@ function DynamicTab({ tab, prefix }) {
 					error,
 					isDirty,
 					isHydrating,
+					globalData
 				})
 			}
 			<Button
@@ -106,7 +107,6 @@ function DynamicTab({ tab, prefix }) {
 				disabled={isSaving || !isDirty}
 			>{ __( 'Save', 'cp-connect' ) }</Button>
 		</Box>
-		
 	)
 }
 
@@ -131,8 +131,8 @@ function TabPanel(props) {
   );
 }
 
-function Settings({ initialData }) {
-	const { chms = initialData.chms } = useSelect((select) => {
+function Settings({ globalData }) {
+	const { chms = globalData.chms } = useSelect((select) => {
 		return {
 			chms: select(optionsStore).getOptionGroup('main_options')?.chms,
 		}
@@ -183,17 +183,17 @@ function Settings({ initialData }) {
 				</Tabs>
 				<Box sx={{ flexGrow: 1, minHeight: 0 }}>
 					<TabPanel value={currentTab} index={0}>
-						<DynamicTab tab={chmsTab} />
+						<DynamicTab tab={chmsTab} globalData={globalData} />
 					</TabPanel>
 					{
 						chmsData.tabs.map((tab, index) => (
 							<TabPanel key={tab.optionGroup} value={currentTab} index={index + 1}>
-								<DynamicTab tab={tab} prefix={chms} />
+								<DynamicTab tab={tab} prefix={chms} globalData={globalData} />
 							</TabPanel>
 						))
 					}
 					<TabPanel value={currentTab} index={chmsData.tabs.length + 1}>
-						<DynamicTab tab={licenseTab} />
+						<DynamicTab tab={licenseTab} globalData={globalData} />
 					</TabPanel>
 				</Box>
 			</Box>
@@ -204,11 +204,11 @@ function Settings({ initialData }) {
 document.addEventListener('DOMContentLoaded', function () {
 	const root = document.querySelector('.cp_settings_root.cp-connect')
 
-	const initialData = JSON.parse(root.dataset.initial)
+	const globalData = JSON.parse(root.dataset.initial) // get the initial data from the root element
 
 	if (root) {
 		createRoot(root).render(
-			<Settings initialData={initialData} />
+			<Settings globalData={globalData} />
 		)
 	}
 })

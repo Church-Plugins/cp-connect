@@ -8,7 +8,7 @@ import StepLabel from '@mui/material/StepLabel'
 import StepButton from '@mui/material/StepButton'
 import StepContent from '@mui/material/StepContent'
 import Stepper from '@mui/material/Stepper'
-import { useState } from '@wordpress/element'
+import { useState, useEffect } from '@wordpress/element'
 import apiFetch from '@wordpress/api-fetch'
 import CircularProgress from '@mui/material/CircularProgress'
 
@@ -32,7 +32,6 @@ export default function ConnectTab({ data, updateField }) {
 			method: 'POST',
 			data: { app_id, secret }
 		}).then((response) => {
-			console.log(response)
 			updateField('authorized', true)
 			updateField('step', activeStep + 1)
 			setIsDirty(false)
@@ -42,6 +41,10 @@ export default function ConnectTab({ data, updateField }) {
 			setAuthLoading(false)
 		})
 	}
+
+	useEffect(() => {
+		setIsDirty(true)
+	}, [activeStep])
 
 	const steps = [
 		{
@@ -87,8 +90,6 @@ export default function ConnectTab({ data, updateField }) {
 			</p>
 		}
 	]	
-
-	console.log(activeStep)
 
 	return (
 		<div>

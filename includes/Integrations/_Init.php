@@ -3,6 +3,8 @@
 namespace CP_Connect\Integrations;
 
 use CP_Connect\Admin\Settings;
+use CP_Connect\ChMS\ChMSError;
+use WP_Error;
 
 /**
  * Setup integration initialization
@@ -22,7 +24,7 @@ class _Init {
 	public static $_cron_hook = 'cp_connect_pull';
 
 	/**
-	 * @var array
+	 * @var Integration[]
 	 */
 	protected static $_integrations = [];
 
@@ -93,6 +95,7 @@ class _Init {
 	 */
 	protected function actions() {
 		add_action( 'init', [ $this, 'schedule_cron' ], 999 );
+		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
 		add_action( self::$_cron_hook, [ $this, 'pull_content' ] );
 	}
 
@@ -104,12 +107,89 @@ class _Init {
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
+	 * @return true|ChMSError
 	 */
 	public function pull_content() {
+		$chms = \CP_Connect\Chms\_Init::get_instance()->get_active_chms_class();
+
 		foreach( self::$_integrations as $integration ) {
-			do_action( 'cp_connect_pull_' . $integration->type, $integration );
+			if ( $chms->supports( $integration->id ) ) {
+				$result = $integration->pull_data_from_chms( $chms );
+
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+			}
+
+			return true;
 		}
 	}
+
+	/**
+	 * Pull a single integration
+	 *
+	 * @param string $integration_id The integration to pull.
+	 *
+	 * @return true|WP_Error
+	 */
+	public function pull_integration( $integration_id ) {
+		$chms = \CP_Connect\Chms\_Init::get_instance()->get_active_chms_class();
+
+		if ( ! isset( self::$_integrations[ $integration_id ] ) ) {
+			return new WP_Error( 'invalid_integration', 'Invalid integration' );
+		}
+
+		$integration = self::$_integrations[ $integration_id ];
+
+		if ( ! $chms->supports( $integration->id ) ) {
+			return new WP_Error( 'integration_not_supported', 'Integration not supported' );
+		}
+
+		return $integration->pull_data_from_chms( $chms );
+	}
+
+	/**
+	 * Register rest API routes
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public function register_rest_routes() {
+		register_rest_route( 'cp-connect/v1', '/pull', [
+			'methods'  => 'POST',
+			'callback' => function() {
+				$result = $this->pull_content();
+
+				if ( is_wp_error( $result ) ) {
+					return new \WP_Error( 'pull_error', $result->get_error_message() );
+				}
+
+				return wp_send_json_success();
+			},
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		] );
+
+		foreach ( self::$_integrations as $integration ) {
+			register_rest_route( 'cp-connect/v1', "/pull/{$integration->id}", [
+				'methods'  => 'POST',
+				'callback' => function() use ( $integration ) {
+					$result = $this->pull_integration( $integration->id );
+	
+					if ( is_wp_error( $result ) ) {
+						return $result;
+					}
+	
+					return wp_send_json_success();
+				},
+				'permission_callback' => function() {
+					return current_user_can( 'manage_options' );
+				},
+			] );
+		}		
+	}
+
 
 	/**
 	 * Schedule the cron to pull data from the ChMS

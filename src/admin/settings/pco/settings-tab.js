@@ -18,7 +18,7 @@ export default function SettingsTab({ data, updateField }) {
 		setIsImporting(true)
 
 		apiFetch({
-			path: '/cp-connect/v1/pco/pull',
+			path: '/cp-connect/v1/pull',
 			method: 'POST',
 		}).then(data => {
 			if(data.success) {
@@ -32,12 +32,14 @@ export default function SettingsTab({ data, updateField }) {
 			setIsImporting(false)
 		})
 	}
-
+	
 	return (
 		<div>
 			{
 				!!error &&
-				<Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+				<Alert severity="error" sx={{ mb: 2 }}>
+					<div dangerouslySetInnerHTML={{ __html: error }}></div>
+				</Alert>
 			}
 
 			{

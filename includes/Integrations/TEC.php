@@ -13,6 +13,7 @@ class TEC extends Integration {
 	public $label = 'Events';
 
 	public function actions() {
+		parent::actions();
 		add_action( 'tribe_events_single_event_before_the_content', [ $this, 'maybe_add_registration_button'] );
 	}
 
@@ -59,6 +60,10 @@ class TEC extends Integration {
 		wp_set_post_terms( $id, $categories, 'tribe_events_cat' );
 
 		return $id;
+	}
+
+	public function register_taxonomy($taxonomy, $args) {
+		register_taxonomy( $taxonomy, 'tribe_events', $args );
 	}
 
 	public function maybe_add_registration_button() {

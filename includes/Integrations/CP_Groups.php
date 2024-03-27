@@ -59,4 +59,11 @@ class CP_Groups extends Integration {
 		return $id;
 	}
 
+	public function actions() {
+		parent::actions();
+	}
+
+	public function register_taxonomy($taxonomy, $args) {
+		register_taxonomy( $taxonomy, 'cp_group', $args );
+	}
 }
