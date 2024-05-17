@@ -696,7 +696,8 @@ class MinistryPlatform extends ChMS {
 		Program_ID_Table.[Program_Name], Events.Primary_Contact, Primary_Contact_Table.[First_Name],
 		Primary_Contact_Table.[Last_Name], Primary_Contact_Table.[Email_Address], Event_Start_Date, Event_End_Date,
 		Visibility_Level_ID, Featured_On_Calendar, Events.Show_On_Web, Online_Registration_Product, Registration_Form,
-		Registration_Start, Registration_End, Registration_Active, _Web_Approved, dp_fileUniqueId as Image_ID";
+		Registration_Start, Registration_End, Registration_Active, _Web_Approved, dp_fileUniqueId as Image_ID,
+		Event_Website_Designation_ID_Table.Website_Designation";
 
 		$tables = array_map( 'trim', explode( ',', $tables ) );
 
@@ -767,6 +768,10 @@ class MinistryPlatform extends ChMS {
 
 			if ( ! empty( $event['Program_Name'] ) ) {
 				$args['event_category'][] = $event['Program_Name'];
+			}
+
+			if ( ! empty( $event['Website_Designation'] ) ) {
+				$args['cpc_event_designation'] = $event['Website_Designation'];
 			}
 
 			if ( ! empty( $event['First_Name'] ) ) {
