@@ -688,16 +688,28 @@ class MinistryPlatform extends ChMS {
 			return false;
 		}
 
+		$tables = "Event_ID, Event_Title, Events.Congregation_ID, Event_Type_ID_Table.[Event_Type],
+		Congregation_ID_Table.[Congregation_Name], Events.Location_ID, Location_ID_Table.[Location_Name],
+		Location_ID_Table_Address_ID_Table.[Address_Line_1], Location_ID_Table_Address_ID_Table.[Address_Line_2],
+		Location_ID_Table_Address_ID_Table.[City], Location_ID_Table_Address_ID_Table.[State/Region],
+		Location_ID_Table_Address_ID_Table.[Postal_Code], Meeting_Instructions, Events.Description, Events.Program_ID,
+		Program_ID_Table.[Program_Name], Events.Primary_Contact, Primary_Contact_Table.[First_Name],
+		Primary_Contact_Table.[Last_Name], Primary_Contact_Table.[Email_Address], Event_Start_Date, Event_End_Date,
+		Visibility_Level_ID, Featured_On_Calendar, Events.Show_On_Web, Online_Registration_Product, Registration_Form,
+		Registration_Start, Registration_End, Registration_Active, _Web_Approved, dp_fileUniqueId as Image_ID";
+
+		$tables = array_map( 'trim', explode( ',', $tables ) );
+
+		/**
+		 * Filter the tables to be pulled from Ministry Platform
+		 *
+		 * @param array $tables The tables to be pulled from Ministry Platform
+		 * @since 1.0.3
+		 */
+		$tables = apply_filters( 'cp_connect_chms_mp_events_tables', $tables );
+
 		$events = $mp->table( 'Events' )
-								->select( "Event_ID, Event_Title, Events.Congregation_ID, Event_Type_ID_Table.[Event_Type],
-								Congregation_ID_Table.[Congregation_Name], Events.Location_ID, Location_ID_Table.[Location_Name],
-								Location_ID_Table_Address_ID_Table.[Address_Line_1], Location_ID_Table_Address_ID_Table.[Address_Line_2],
-								Location_ID_Table_Address_ID_Table.[City], Location_ID_Table_Address_ID_Table.[State/Region],
-								Location_ID_Table_Address_ID_Table.[Postal_Code], Meeting_Instructions, Events.Description, Events.Program_ID,
-								Program_ID_Table.[Program_Name], Events.Primary_Contact, Primary_Contact_Table.[First_Name],
-								Primary_Contact_Table.[Last_Name], Primary_Contact_Table.[Email_Address], Event_Start_Date, Event_End_Date,
-								Visibility_Level_ID, Featured_On_Calendar, Events.Show_On_Web, Online_Registration_Product, Registration_Form,
-								Registration_Start, Registration_End, Registration_Active, _Web_Approved, dp_fileUniqueId as Image_ID" )
+								->select( implode( ',', $tables ) )
 								->filter( "Events.Show_On_Web = 'TRUE' AND Events._Web_Approved = 'TRUE' AND Events.Visibility_Level_ID = 4 AND Events.Event_End_Date >= getdate()" )
 								->get();
 

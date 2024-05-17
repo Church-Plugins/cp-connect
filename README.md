@@ -21,6 +21,7 @@ npm run build
 
 #### 1.0.3
 * Add more mapping fields for MinistryPlatform
+* Add filter for events tables
 
 #### 1.0.2
 * Add CCB support
