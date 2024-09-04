@@ -52,6 +52,9 @@ class ChurchCommunityBuilder extends ChMS {
 			// Skip inactive and general groups
 			// @TODO ... this should be a filter so it isn't specific to ChristPres
 			if ( ! $group->inactive ) { continue; }
+
+			if ( 'true' === $group->inactive ) { continue; }
+
 			if ( "Church - General" == $group->department ) { continue; }
 
 			// Only process if it's a connect group type
