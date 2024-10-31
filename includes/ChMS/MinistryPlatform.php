@@ -365,7 +365,7 @@ class MinistryPlatform extends ChMS {
 			'group_life_stage'    => 'Life_Stage',
 			'kid_friendly'        => 'Child_Friendly_Group',
 			'handicap_accessible' => 'Accessible',
-			'virtual'             => 'Meets_Online',
+			'meets_online'        => 'Meets_Online',
 		);
 	}
 
@@ -394,7 +394,7 @@ class MinistryPlatform extends ChMS {
 			'group_life_stage'    => 'Life Stage',
 			'kid_friendly'        => 'Child Friendly',
 			'handicap_accessible' => 'Accessible',
-			'virtual'             => 'Virtual',
+			'meets_online'        => 'Meets Online',
 		);
 	}
 
@@ -938,8 +938,8 @@ class MinistryPlatform extends ChMS {
 				$args['meta_input']['handicap_accessible'] = (bool) $mapped_values['handicap_accessible'] ? 'on' : false;
 			}
 
-			if ( isset( $mapped_values['virtual'] ) ) {
-				$args['meta_input']['virtual'] = (bool) $mapped_values['virtual'] ? 'on' : false;
+			if ( isset( $mapped_values['meets_online'] ) ) {
+				$args['meta_input']['meets_online'] = (bool) $mapped_values['meets_online'] ? 'on' : false;
 			}
 
 			/**
