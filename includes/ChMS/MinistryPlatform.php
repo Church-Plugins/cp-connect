@@ -711,7 +711,7 @@ class MinistryPlatform extends ChMS {
 
 		$events = $mp->table( 'Events' )
 								->select( implode( ',', $tables ) )
-								->filter( "Events.Show_On_Web = 'TRUE' AND Events._Web_Approved = 'TRUE' AND Events.Visibility_Level_ID = 4 AND Events.Event_End_Date >= getdate()" )
+								->filter( "Events.Show_On_Web = 'TRUE' AND Events.Visibility_Level_ID = 4 AND Events.Event_End_Date >= getdate()" )
 								->get();
 
 		$formatted = [];
