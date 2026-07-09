@@ -796,7 +796,7 @@ class MinistryPlatform extends ChMS {
 				];
 			}
 
-			$formatted[] = $args;
+			$formatted[] = apply_filters( 'cp_connect_chms_mp_event_formatted', $args, $event );
 		}
 
 		$integration->process( $formatted );
