@@ -753,7 +753,9 @@ class MinistryPlatform extends ChMS {
 			];
 
 			if ( ! empty( $event['Image_ID'] ) ) {
-				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?mpevent-' . sanitize_title( $args['post_title'] ) . '.jpeg';
+				// The query string becomes the uploaded filename. Include a hash of the image id so a different
+				// image with the same title never reuses a filename (and url) that BB, CDN and browser caches key on.
+				$args['thumbnail_url'] = $this->get_option_value( 'MP_API_ENDPOINT' ) . '/files/' . $event['Image_ID'] . '?mpevent-' . sanitize_title( $args['post_title'] ) . '-' . substr( md5( $event['Image_ID'] ), 0, 8 ) . '.jpeg';
 			}
 
 			if ( ! empty( $event['Congregation_ID'] ) ) {
@@ -885,7 +887,7 @@ class MinistryPlatform extends ChMS {
 			if ( isset( $mapped_values['thumbnail_url'] ) ) {
 				$url = get_option( 'ministry_platform_api_config' );
 				$url = isset( $url[ 'MP_API_ENDPOINT' ] ) ? $url[ 'MP_API_ENDPOINT' ] : '';
-				$args['thumbnail_url'] = $url . '/files/' . $mapped_values['thumbnail_url'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '.jpeg';
+				$args['thumbnail_url'] = $url . '/files/' . $mapped_values['thumbnail_url'] . '?mpgroup-' . sanitize_title( $args['post_title'] ) . '-' . substr( md5( $mapped_values['thumbnail_url'] ), 0, 8 ) . '.jpeg';
 			}
 
 			if ( isset( $mapped_values['frequency'] ) ) {
