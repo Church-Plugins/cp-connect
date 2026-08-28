@@ -480,7 +480,7 @@ class PCO extends ChMS {
 			// Fesatured image
 			if ( ! empty( $event['attributes']['image_url'] ) ) {
 				$url = explode( '?', $event['attributes']['image_url'], 2 );
-				$args['thumbnail_url'] = $url[0] . '?tecevent-' . sanitize_title( $args['post_title'] ) . '.jpeg&' . $url[1];
+				$args['thumbnail_url'] = $url[0] . '?tecevent-' . sanitize_title( $args['post_title'] ) . '-' . substr( md5( $url[0] ), 0, 8 ) . '.jpeg&' . $url[1];
 			}
 
 			// Generic location - a long string with an entire address
